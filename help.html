@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pomoć — Adriatic Nalozi</title>
+<style>
+:root {
+  --bg:#0b0c0e;--surf:#13151a;--surf2:#1a1d25;--surf3:#21252f;
+  --brd:#272b36;--brd2:#323848;
+  --acc:#f0c040;--acc2:#d4a030;
+  --grn:#34d399;--red:#f87171;--blu:#60a5fa;--pur:#a78bfa;
+  --txt:#e2e6f0;--mut:#636b80;--mut2:#8892a4;
+  --mono:ui-monospace,'Cascadia Code','Source Code Pro',monospace;
+  --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  --r:10px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--txt);font-family:var(--sans);line-height:1.6;min-height:100vh}
+
+/* ── HEADER ── */
+header{background:var(--surf);border-bottom:1px solid var(--brd);padding:14px 20px;position:sticky;top:0;z-index:100;display:flex;align-items:center;gap:12px}
+.hlogo{font-size:1rem;font-weight:800;color:var(--acc);letter-spacing:-.5px}
+.hlogo small{color:var(--mut2);font-weight:400;font-size:.73rem;margin-left:6px}
+.hback{margin-left:auto;background:transparent;border:1px solid var(--brd2);color:var(--mut2);font-family:var(--sans);font-size:.72rem;font-weight:700;padding:5px 12px;border-radius:6px;cursor:pointer;text-decoration:none;transition:all .18s}
+.hback:hover{border-color:var(--acc);color:var(--acc)}
+
+/* ── LAYOUT ── */
+.wrap{max-width:740px;margin:0 auto;padding:32px 20px 80px}
+
+/* ── HERO ── */
+.hero{text-align:center;padding:40px 0 48px}
+.hero-icon{font-size:3rem;margin-bottom:12px}
+.hero h1{font-size:1.8rem;font-weight:800;letter-spacing:-.5px;margin-bottom:8px}
+.hero p{font-size:.9rem;color:var(--mut2);max-width:480px;margin:0 auto}
+
+/* ── NAV ── */
+.toc{background:var(--surf);border:1px solid var(--brd);border-radius:var(--r);padding:18px 20px;margin-bottom:36px}
+.toc-title{font-size:.6rem;font-weight:700;letter-spacing:1.8px;text-transform:uppercase;color:var(--mut2);margin-bottom:12px}
+.toc-list{display:flex;flex-direction:column;gap:4px}
+.toc-list a{color:var(--mut2);text-decoration:none;font-size:.83rem;padding:4px 0;display:flex;align-items:center;gap:8px;transition:color .15s}
+.toc-list a:hover{color:var(--acc)}
+.toc-list a::before{content:'';width:16px;height:1px;background:var(--brd2);flex-shrink:0;transition:background .15s}
+.toc-list a:hover::before{background:var(--acc)}
+
+/* ── SEKCIJA ── */
+.sec{margin-bottom:48px}
+.sec-hd{display:flex;align-items:center;gap:10px;margin-bottom:20px;padding-bottom:10px;border-bottom:1px solid var(--brd)}
+.sec-ico{font-size:1.3rem;flex-shrink:0}
+.sec-title{font-size:1.1rem;font-weight:700}
+.sec-num{font-family:var(--mono);font-size:.68rem;color:var(--acc);background:rgba(240,192,64,.12);border:1px solid rgba(240,192,64,.2);border-radius:4px;padding:1px 7px;flex-shrink:0}
+
+/* ── KORAK ── */
+.steps{display:flex;flex-direction:column;gap:0}
+.step{display:flex;gap:14px;padding:14px 0;border-bottom:1px solid var(--brd)}
+.step:last-child{border-bottom:none}
+.step-n{width:26px;height:26px;border-radius:50%;background:rgba(240,192,64,.12);border:1px solid rgba(240,192,64,.25);color:var(--acc);font-family:var(--mono);font-size:.72rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.step-body{}
+.step-title{font-size:.88rem;font-weight:700;margin-bottom:4px}
+.step-desc{font-size:.8rem;color:var(--mut2);line-height:1.6}
+
+/* ── POLJE ── */
+.fields{display:flex;flex-direction:column;gap:6px}
+.field{background:var(--surf2);border:1px solid var(--brd);border-radius:8px;padding:10px 13px;display:flex;align-items:flex-start;gap:10px}
+.field-ico{font-size:.95rem;flex-shrink:0;margin-top:1px}
+.field-nm{font-size:.82rem;font-weight:700;margin-bottom:2px}
+.field-desc{font-size:.76rem;color:var(--mut2);line-height:1.5}
+.field.locked{border-color:rgba(248,113,113,.2);background:rgba(248,113,113,.04)}
+.field.locked .field-nm{color:var(--red)}
+.badge{display:inline-flex;align-items:center;font-size:.62rem;font-weight:700;padding:1px 7px;border-radius:10px;margin-left:6px;vertical-align:middle}
+.b-foto{background:rgba(52,211,153,.12);color:var(--grn);border:1px solid rgba(52,211,153,.3)}
+.b-admin{background:rgba(240,192,64,.12);color:var(--acc);border:1px solid rgba(240,192,64,.25)}
+.b-lock{background:rgba(248,113,113,.1);color:var(--red);border:1px solid rgba(248,113,113,.25)}
+
+/* ── STATUS BADGE ── */
+.statuses{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.sb{border-radius:8px;padding:10px 14px;flex:1;min-width:140px}
+.sb-lbl{font-size:.68rem;font-weight:700;padding:2px 8px;border-radius:20px;border:1px solid;display:inline-block;margin-bottom:6px}
+.sb-desc{font-size:.75rem;color:var(--mut2);line-height:1.5}
+.sb.ceka .sb-lbl{background:rgba(240,192,64,.12);color:var(--acc);border-color:rgba(240,192,64,.3)}
+.sb.ceka{background:rgba(240,192,64,.04);border:1px solid rgba(240,192,64,.15)}
+.sb.obav .sb-lbl{background:rgba(52,211,153,.12);color:var(--grn);border-color:rgba(52,211,153,.3)}
+.sb.obav{background:rgba(52,211,153,.04);border:1px solid rgba(52,211,153,.15)}
+.sb.otk .sb-lbl{background:rgba(248,113,113,.1);color:var(--red);border-color:rgba(248,113,113,.3)}
+.sb.otk{background:rgba(248,113,113,.04);border:1px solid rgba(248,113,113,.15)}
+.sb.nodt .sb-lbl{background:rgba(99,107,128,.1);color:var(--mut2);border-color:rgba(99,107,128,.3)}
+.sb.nodt{background:rgba(99,107,128,.04);border:1px solid rgba(99,107,128,.15)}
+
+/* ── INFO / WARN BOX ── */
+.ib{background:rgba(96,165,250,.07);border:1px solid rgba(96,165,250,.2);border-radius:8px;padding:10px 14px;font-size:.78rem;color:var(--blu);line-height:1.6;margin-top:10px}
+.wb{background:rgba(248,113,113,.07);border:1px solid rgba(248,113,113,.2);border-radius:8px;padding:10px 14px;font-size:.78rem;color:var(--red);line-height:1.6;margin-top:10px}
+.gb{background:rgba(52,211,153,.07);border:1px solid rgba(52,211,153,.2);border-radius:8px;padding:10px 14px;font-size:.78rem;color:var(--grn);line-height:1.6;margin-top:10px}
+
+/* ── UI PRIKAZ ── */
+.ui-box{background:var(--surf2);border:1px solid var(--brd);border-radius:var(--r);padding:16px;margin-top:10px;font-size:.78rem}
+.ui-row{display:flex;gap:8px;align-items:flex-start;margin-bottom:8px}
+.ui-row:last-child{margin-bottom:0}
+.ui-tag{background:var(--surf3);border:1px solid var(--brd2);border-radius:4px;font-family:var(--mono);font-size:.68rem;color:var(--acc);padding:2px 7px;flex-shrink:0;white-space:nowrap}
+.ui-desc{color:var(--mut2);line-height:1.5}
+
+/* ── SEPARATOR ── */
+.sep{border:none;border-top:1px solid var(--brd);margin:40px 0}
+
+@media(max-width:600px){
+  .hero h1{font-size:1.4rem}
+  .statuses{flex-direction:column}
+  .sb{min-width:unset}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hlogo">📷 Adriatic Nalozi <small>pomoć</small></div>
+  <a class="hback" href="index.html">← Natrag na app</a>
+</header>
+
+<div class="wrap">
+
+  <div class="hero">
+    <div class="hero-icon">📋</div>
+    <h1>Upute za korištenje</h1>
+    <p>Sve što trebaš znati za upravljanje nalozima snimanja — od prijave do dodjele fotografu.</p>
+  </div>
+
+  <!-- TOC -->
+  <div class="toc">
+    <div class="toc-title">Sadržaj</div>
+    <div class="toc-list">
+      <a href="#prijava">Prijava i odjava</a>
+      <a href="#pregled">Pregled fotografa i naloga</a>
+      <a href="#novi-nalog">Dodavanje novog naloga</a>
+      <a href="#uredivanje">Uređivanje naloga</a>
+      <a href="#statusi">Statusi naloga</a>
+      <a href="#polja">Polja naloga — što tko mijenja</a>
+      <a href="#osvjezi">Osvježavanje podataka</a>
+      <a href="#pwa">Instalacija na uređaj</a>
+    </div>
+  </div>
+
+  <!-- 1. PRIJAVA -->
+  <div class="sec" id="prijava">
+    <div class="sec-hd">
+      <span class="sec-num">01</span>
+      <span class="sec-ico">🔐</span>
+      <span class="sec-title">Prijava i odjava</span>
+    </div>
+    <div class="steps">
+      <div class="step">
+        <div class="step-n">1</div>
+        <div class="step-body">
+          <div class="step-title">Unesi e-mail i lozinku</div>
+          <div class="step-desc">Koristi admin podatke za prijavu. Aplikacija ne prihvaća prijavu fotografa — samo korisnici koji su evidentirani kao admini mogu pristupiti.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-n">2</div>
+        <div class="step-body">
+          <div class="step-title">Prijava se pamti</div>
+          <div class="step-desc">Token se sprema lokalno — pri sljedećem otvaranju app automatski ulazi bez ponovne prijave, sve dok se ne odjaviš ili ne istekne sesija.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-n">3</div>
+        <div class="step-body">
+          <div class="step-title">Odjava</div>
+          <div class="step-desc">Gumb <strong>Odjava</strong> u gornjem desnom kutu. Potvrdi dijalogom — lokalni podaci se brišu s uređaja.</div>
+        </div>
+      </div>
+    </div>
+    <div class="wb">⚠️ Ne dijeli admin pristup s fotografima. Svaki fotograf ima vlastiti korisnički račun kroz FotoKalk PRO aplikaciju.</div>
+  </div>
+
+  <hr class="sep">
+
+  <!-- 2. PREGLED -->
+  <div class="sec" id="pregled">
+    <div class="sec-hd">
+      <span class="sec-num">02</span>
+      <span class="sec-ico">👁</span>
+      <span class="sec-title">Pregled fotografa i naloga</span>
+    </div>
+    <p style="font-size:.83rem;color:var(--mut2);margin-bottom:16px">Sučelje je podijeljeno na dva panela.</p>
+    <div class="ui-box">
+      <div class="ui-row">
+        <span class="ui-tag">Lijevi panel</span>
+        <span class="ui-desc">Lista svih fotografa. Prikazuje broj naloga i oznaku koliko ih čeka na obradu. Klikni na fotografa da vidiš njegove naloge.</span>
+      </div>
+      <div class="ui-row">
+        <span class="ui-tag">Desni panel</span>
+        <span class="ui-desc">Nalozi odabranog fotografa, sortirani po datumu snimanja (bez datuma padaju na dno).</span>
+      </div>
+      <div class="ui-row">
+        <span class="ui-tag">🔍 Pretraga</span>
+        <span class="ui-desc">Pretraži fotografa po imenu ili dijelu UUID-a — korisno kad imaš više fotografa.</span>
+      </div>
+      <div class="ui-row">
+        <span class="ui-tag">Filteri</span>
+        <span class="ui-desc"><strong>Na čekanju</strong> (default) · <strong>Svi</strong> · <strong>Obavljeno</strong> · <strong>Otkazano</strong> — filtriraju prikaz naloga desnog panela.</span>
+      </div>
+    </div>
+    <div class="ib">ℹ️ Broj u žutom krugu pored fotografa = nalozi na čekanju. Zeleni krug s ✓ = svi nalozi obavljeni.</div>
+  </div>
+
+  <hr class="sep">
+
+  <!-- 3. NOVI NALOG -->
+  <div class="sec" id="novi-nalog">
+    <div class="sec-hd">
+      <span class="sec-num">03</span>
+      <span class="sec-ico">➕</span>
+      <span class="sec-title">Dodavanje novog naloga</span>
+    </div>
+    <div class="steps">
+      <div class="step">
+        <div class="step-n">1</div>
+        <div class="step-body">
+          <div class="step-title">Odaberi fotografa</div>
+          <div class="step-desc">Klikni na fotografa u lijevom panelu. Gumb <strong>+ Novi nalog</strong> postaje aktivan tek nakon odabira.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-n">2</div>
+        <div class="step-body">
+          <div class="step-title">Klikni + Novi nalog</div>
+          <div class="step-desc">Otvara se forma. U padajućem izborniku <strong>Dodijeli fotografu</strong> možeš promijeniti fotografa i nalog dodijeliti drugome.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-n">3</div>
+        <div class="step-body">
+          <div class="step-title">Popuni podatke</div>
+          <div class="step-desc">Šifra objekta, broj ugovora, ime i prezime vlasnika, telefon, adresa, GPS koordinate i napomena. Datum snimanja i status <strong>ne unosiš ti</strong> — to postavlja fotograf.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-n">4</div>
+        <div class="step-body">
+          <div class="step-title">Spremi nalog</div>
+          <div class="step-desc">Klikni <strong>💾 Spremi nalog</strong>. Podaci se odmah šalju na server i postaju vidljivi fotografu u FotoKalk PRO aplikaciji.</div>
+        </div>
+      </div>
+    </div>
+    <div class="gb">✓ Novi nalog automatski dobiva status <strong>Na čekanju</strong> i čeka da fotograf postavi datum snimanja.</div>
+  </div>
+
+  <hr class="sep">
+
+  <!-- 4. UREĐIVANJE -->
+  <div class="sec" id="uredivanje">
+    <div class="sec-hd">
+      <span class="sec-num">04</span>
+      <span class="sec-ico">✏️</span>
+      <span class="sec-title">Uređivanje naloga</span>
+    </div>
+    <div class="steps">
+      <div class="step">
+        <div class="step-n">1</div>
+        <div class="step-body">
+          <div class="step-title">Klikni ✏️ Uredi na kartici naloga</div>
+          <div class="step-desc">Svaka kartica naloga ima gumb <strong>✏️ Uredi</strong> u donjem desnom kutu.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-n">2</div>
+        <div class="step-body">
+          <div class="step-title">Izmijeni podatke</div>
+          <div class="step-desc">Možeš mijenjati sve admin podatke. Fotografu možeš i promijeniti dodjelu — odaberi drugog fotografa iz padajućeg izbornika i nalog će se premjestiti.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-n">3</div>
+        <div class="step-body">
+          <div class="step-title">Spremi</div>
+          <div class="step-desc">Kod spremanja aplikacija uvijek prvo povuče svježe podatke s baze, zatim spoji promjene — fotografovi datum i status ostaju netaknuti.</div>
+        </div>
+      </div>
+    </div>
+    <div class="ib">ℹ️ Ako je fotograf u međuvremenu promijenio status ili datum, te promjene neće biti pregažene. Svaka strana mijenja isključivo svoja polja.</div>
+  </div>
+
+  <hr class="sep">
+
+  <!-- 5. STATUSI -->
+  <div class="sec" id="statusi">
+    <div class="sec-hd">
+      <span class="sec-num">05</span>
+      <span class="sec-ico">🏷</span>
+      <span class="sec-title">Statusi naloga</span>
+    </div>
+    <p style="font-size:.83rem;color:var(--mut2);margin-bottom:14px">Status postavlja isključivo fotograf kroz svoju aplikaciju. Admin ga vidi, ali ne može mijenjati.</p>
+    <div class="statuses">
+      <div class="sb ceka">
+        <span class="sb-lbl">Na čekanju</span>
+        <div class="sb-desc">Nalog primljen, fotograf još nije postavio datum snimanja.</div>
+      </div>
+      <div class="sb nodt">
+        <span class="sb-lbl">Čeka datum fotografa</span>
+        <div class="sb-desc">Fotograf je prihvatio nalog ali datum snimanja još nije dogovoren.</div>
+      </div>
+      <div class="sb obav">
+        <span class="sb-lbl">Obavljeno</span>
+        <div class="sb-desc">Snimanje je obavljeno. Fotograf je označio kao završeno.</div>
+      </div>
+      <div class="sb otk">
+        <span class="sb-lbl">Otkazano</span>
+        <div class="sb-desc">Nalog je otkazan. Prigušen prikaz na kartici.</div>
+      </div>
+    </div>
+    <div class="wb" style="margin-top:14px">🔒 Status mijenja fotograf — prikazano je zaključano na svakoj kartici naloga.</div>
+  </div>
+
+  <hr class="sep">
+
+  <!-- 6. POLJA -->
+  <div class="sec" id="polja">
+    <div class="sec-hd">
+      <span class="sec-num">06</span>
+      <span class="sec-ico">📝</span>
+      <span class="sec-title">Polja naloga — što tko mijenja</span>
+    </div>
+    <div class="fields">
+      <div class="field">
+        <div class="field-ico">🔑</div>
+        <div>
+          <div class="field-nm">Šifra objekta <span class="badge b-admin">admin</span></div>
+          <div class="field-desc">Interni kod objekta, npr. HR-12345. Prikazuje se istaknuto na kartici.</div>
+        </div>
+      </div>
+      <div class="field">
+        <div class="field-ico">📄</div>
+        <div>
+          <div class="field-nm">Broj ugovora <span class="badge b-admin">admin</span></div>
+          <div class="field-desc">Referenca na ugovor, npr. 1191/2026.</div>
+        </div>
+      </div>
+      <div class="field">
+        <div class="field-ico">👤</div>
+        <div>
+          <div class="field-nm">Ime i prezime vlasnika <span class="badge b-admin">admin</span></div>
+          <div class="field-desc">Kontakt osoba za snimanje.</div>
+        </div>
+      </div>
+      <div class="field">
+        <div class="field-ico">📞</div>
+        <div>
+          <div class="field-nm">Telefon <span class="badge b-admin">admin</span></div>
+          <div class="field-desc">Klikabilan broj na kartici — fotograf može direktno nazvati.</div>
+        </div>
+      </div>
+      <div class="field">
+        <div class="field-ico">📍</div>
+        <div>
+          <div class="field-nm">Adresa objekta <span class="badge b-admin">admin</span></div>
+          <div class="field-desc">Otvara Google Maps link na kartici naloga.</div>
+        </div>
+      </div>
+      <div class="field">
+        <div class="field-ico">🗺</div>
+        <div>
+          <div class="field-nm">GPS koordinate <span class="badge b-admin">admin</span></div>
+          <div class="field-desc">Latitude i longitude. Ako su unesene, Google Maps link koristi koordinate umjesto adrese — preciznije za objekte izvan naselja.</div>
+        </div>
+      </div>
+      <div class="field">
+        <div class="field-ico">📝</div>
+        <div>
+          <div class="field-nm">Napomena <span class="badge b-admin">admin</span></div>
+          <div class="field-desc">Posebne upute: pristup, ključevi, parking, specifični zahtjevi snimanja.</div>
+        </div>
+      </div>
+      <div class="field locked">
+        <div class="field-ico">📅</div>
+        <div>
+          <div class="field-nm">Datum snimanja <span class="badge b-lock">🔒 fotograf</span></div>
+          <div class="field-desc">Fotograf postavlja datum nakon dogovora s vlasnikom. Admin ne može mijenjati.</div>
+        </div>
+      </div>
+      <div class="field locked">
+        <div class="field-ico">🏷</div>
+        <div>
+          <div class="field-nm">Status <span class="badge b-lock">🔒 fotograf</span></div>
+          <div class="field-desc">Na čekanju / Obavljeno / Otkazano — isključivo u nadležnosti fotografa.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <hr class="sep">
+
+  <!-- 7. OSVJEŽI -->
+  <div class="sec" id="osvjezi">
+    <div class="sec-hd">
+      <span class="sec-num">07</span>
+      <span class="sec-ico">↺</span>
+      <span class="sec-title">Osvježavanje podataka</span>
+    </div>
+    <p style="font-size:.83rem;color:var(--mut2);margin-bottom:16px">Aplikacija ne osvježava automatski u pozadini — podatke povlačiš ručno kada trebaš.</p>
+    <div class="ui-box">
+      <div class="ui-row">
+        <span class="ui-tag">↺ Osvježi</span>
+        <span class="ui-desc">Gumb u gornjem desnom kutu. Povlači svježe podatke svih fotografa s baze i ažurira oba panela.</span>
+      </div>
+    </div>
+    <div class="ib">ℹ️ Kad fotograf označi nalog kao obavljen ili postavi datum, promjena nije vidljiva dok ne klikneš Osvježi.</div>
+  </div>
+
+  <hr class="sep">
+
+  <!-- 8. PWA -->
+  <div class="sec" id="pwa">
+    <div class="sec-hd">
+      <span class="sec-num">08</span>
+      <span class="sec-ico">📲</span>
+      <span class="sec-title">Instalacija na uređaj</span>
+    </div>
+    <p style="font-size:.83rem;color:var(--mut2);margin-bottom:16px">Aplikacija se može instalirati kao PWA — radi kao nativna app bez browserske trake.</p>
+    <div class="steps">
+      <div class="step">
+        <div class="step-n">🤖</div>
+        <div class="step-body">
+          <div class="step-title">Android / Chrome</div>
+          <div class="step-desc">Otvori aplikaciju u Chromeu → tri točkice (⋮) → <strong>Dodaj na početni zaslon</strong> → Instaliraj.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-n">🍎</div>
+        <div class="step-body">
+          <div class="step-title">iPhone / iPad — Safari</div>
+          <div class="step-desc">Otvori u Safariju → ikona <strong>↑ Dijeli</strong> → <strong>Dodaj na početni zaslon</strong> → Dodaj.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-n">💻</div>
+        <div class="step-body">
+          <div class="step-title">Desktop — Chrome / Edge</div>
+          <div class="step-desc">U adresnoj traci pojavljuje se ikona instalacije (⊕) s desne strane → klikni → Instaliraj.</div>
+        </div>
+      </div>
+    </div>
+    <div class="gb">✓ Nakon instalacije aplikacija se otvara u punom ekranu bez browser sučelja i dostupna je direktno s početnog zaslona.</div>
+  </div>
+
+</div><!-- /wrap -->
+
+</body>
+</html>
