@@ -134,7 +134,8 @@ header{background:var(--surf);border-bottom:1px solid var(--brd);padding:14px 20
       <a href="#uredivanje">Uređivanje naloga</a>
       <a href="#statusi">Statusi naloga</a>
       <a href="#polja">Polja naloga — što tko mijenja</a>
-      <a href="#osvjezi">Osvježavanje podataka</a>
+      <a href="#realtime">Sinkronizacija u realnom vremenu</a>
+      <a href="#osvjezi">Ručno osvježavanje</a>
       <a href="#pwa">Instalacija na uređaj</a>
     </div>
   </div>
@@ -389,22 +390,51 @@ header{background:var(--surf);border-bottom:1px solid var(--brd);padding:14px 20
 
   <hr class="sep">
 
-  <!-- 7. OSVJEŽI -->
-  <div class="sec" id="osvjezi">
+  <!-- 7. REALTIME -->
+  <div class="sec" id="realtime">
     <div class="sec-hd">
       <span class="sec-num">07</span>
-      <span class="sec-ico">↺</span>
-      <span class="sec-title">Osvježavanje podataka</span>
+      <span class="sec-ico">⚡</span>
+      <span class="sec-title">Sinkronizacija u realnom vremenu</span>
     </div>
-    <p style="font-size:.83rem;color:var(--mut2);margin-bottom:16px">Aplikacija ne osvježava automatski u pozadini — podatke povlačiš ručno kada trebaš.</p>
+    <p style="font-size:.83rem;color:var(--mut2);margin-bottom:16px">Aplikacija je stalno spojena na bazu putem WebSocket veze — promjene fotografa vidljive su odmah, bez osvježavanja stranice.</p>
+    <div class="ui-box">
+      <div class="ui-row">
+        <span class="ui-tag">● LIVE</span>
+        <span class="ui-desc">Zeleni pulsirajući indikator u gornjem desnom kutu — WebSocket veza je aktivna. Promjene fotografa stižu automatski.</span>
+      </div>
+      <div class="ui-row">
+        <span class="ui-tag">● Spajanje…</span>
+        <span class="ui-desc">Aplikacija uspostavlja vezu. Normalno traje nekoliko sekundi pri pokretanju ili nakon prekida.</span>
+      </div>
+      <div class="ui-row">
+        <span class="ui-tag">● Greška</span>
+        <span class="ui-desc">Veza je prekinuta — aplikacija automatski pokušava ponovo svakih 5 sekundi. Korisiti gumb Osvježi za ručnu provjeru.</span>
+      </div>
+    </div>
+    <div class="gb">✓ Kad fotograf klikne "Fotografirano" ili postavi datum, kartica naloga se ažurira na tvom ekranu u trenutku — bez ikakvog klika.</div>
+    <div class="ib" style="margin-top:10px">ℹ️ Uz indikator veze postoji i statusni dot (desno od LIVE oznake) koji prikazuje stanje zadnje operacije upisa: zeleno = uspjeh, žuto = u tijeku, crveno = greška.</div>
+  </div>
+
+  <hr class="sep">
+
+  <!-- 7b. OSVJEŽI -->
+  <div class="sec" id="osvjezi">
+    <div class="sec-hd">
+      <span class="sec-num">07b</span>
+      <span class="sec-ico">↺</span>
+      <span class="sec-title">Ručno osvježavanje</span>
+    </div>
+    <p style="font-size:.83rem;color:var(--mut2);margin-bottom:16px">Uz automatski Realtime, uvijek možeš ručno povući svježe podatke.</p>
     <div class="ui-box">
       <div class="ui-row">
         <span class="ui-tag">↺ Osvježi</span>
-        <span class="ui-desc">Gumb u gornjem desnom kutu. Povlači svježe podatke svih fotografa s baze i ažurira oba panela.</span>
+        <span class="ui-desc">Gumb u gornjem desnom kutu. Povlači svježe podatke svih fotografa s baze i ažurira oba panela — korisno ako sumnjаš da Realtime veza nije radila.</span>
       </div>
     </div>
-    <div class="ib">ℹ️ Kad fotograf označi nalog kao obavljen ili postavi datum, promjena nije vidljiva dok ne klikneš Osvježi.</div>
+    <div class="ib">ℹ️ Osvježi uvijek radi neovisno o statusu Realtime veze — pouzdano kao rezervna opcija.</div>
   </div>
+
 
   <hr class="sep">
 
