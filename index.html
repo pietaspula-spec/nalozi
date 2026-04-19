@@ -205,6 +205,13 @@ textarea{resize:vertical;min-height:58px;font-size:.82rem;line-height:1.5}
 .sdot.ok{background:var(--grn)}.sdot.err{background:var(--red)}
 .sdot.busy{background:var(--acc);animation:pulse .9s ease-in-out infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+/* ── REALTIME DOT ── */
+.rt-wrap{display:flex;align-items:center;gap:5px;font-size:.65rem;color:var(--mut);font-family:var(--mono);white-space:nowrap}
+.rt-dot{width:7px;height:7px;border-radius:50%;background:var(--mut);flex-shrink:0;transition:background .4s}
+.rt-dot.live{background:var(--grn);box-shadow:0 0 0 2px rgba(52,211,153,.25);animation:rtpulse 2.5s ease-in-out infinite}
+.rt-dot.err{background:var(--red)}
+@keyframes rtpulse{0%,100%{box-shadow:0 0 0 2px rgba(52,211,153,.25)}50%{box-shadow:0 0 0 5px rgba(52,211,153,0)}}
+
 /* new nalog badge */
 .new-badge{font-size:.6rem;font-weight:700;padding:1px 6px;border-radius:10px;
   background:rgba(96,165,250,.15);color:var(--blu);border:1px solid rgba(96,165,250,.3);
@@ -232,6 +239,10 @@ textarea{resize:vertical;min-height:58px;font-size:.82rem;line-height:1.5}
   <header>
     <div class="hlogo">📷 Adriatic Nalozi <small>admin</small></div>
     <div class="hright">
+      <span class="rt-wrap" id="rtWrap" title="Realtime status">
+        <span class="rt-dot" id="rtDot"></span>
+        <span id="rtLbl">—</span>
+      </span>
       <span class="sdot" id="sdot"></span>
       <span class="huser" id="hEmail"></span>
       <label class="theme-sl" onclick="toggleTheme()" title="Tema">
@@ -474,7 +485,7 @@ async function doLogin() {
 }
 
 function doLogout() {
-  confirm2('Odjavi se?', () => { clearAuth(); allRows = []; selUid = null; showLogin(); });
+  confirm2('Odjavi se?', () => { stopRealtime(); clearAuth(); allRows = []; selUid = null; showLogin(); });
 }
 
 document.addEventListener('keydown', e => {
@@ -529,11 +540,9 @@ async function sbPatchPlan(targetUid, newPlan) {
   if(!res.ok) { const t = await res.text(); throw new Error(`HTTP ${res.status}: ${t}`); }
   // HTTP 204 = uspjeh
 
-  // 4. Svježi GET za lokalni keš — potvrđuje da je zaista zapisano
-  const verifyRow = await sbFetchFresh(targetUid);
+  // 4. Ažuriraj lokalni keš direktno — bez dodatnog GET-a
   const localRow = allRows.find(r => r.user_id === targetUid);
-  if(localRow) localRow.sadrzaj = verifyRow.sadrzaj;
-  return verifyRow;
+  if(localRow) localRow.sadrzaj = merged;
 }
 
 // ── DATA ──
@@ -787,6 +796,99 @@ async function saveNalog() {
   }
 }
 
+// ── REALTIME ──
+let _rtWs = null;
+let _rtRetry = null;
+
+function rtSetStatus(state) {
+  const dot = g('rtDot'), lbl = g('rtLbl');
+  if(!dot) return;
+  const map = { conn:['','Spajanje…'], live:['live','LIVE'], err:['err','Greška'], off:['','—'] };
+  const [cls, txt] = map[state] || map.off;
+  dot.className = 'rt-dot' + (cls ? ' ' + cls : '');
+  lbl.textContent = txt;
+}
+
+function startRealtime() {
+  if(_rtWs) { try { _rtWs.close(); } catch(_){} _rtWs = null; }
+  clearTimeout(_rtRetry);
+  rtSetStatus('conn');
+
+  const wsUrl = `wss://${SB_URL.replace('https://','')}/realtime/v1/websocket?apikey=${SB_KEY}&vsn=1.0.0`;
+  const ws = new WebSocket(wsUrl);
+  _rtWs = ws;
+
+  ws.onopen = () => {
+    ws.send(JSON.stringify({
+      topic: 'realtime:public:podaci',
+      event: 'phx_join',
+      payload: {
+        config: {
+          broadcast: { self: false },
+          presence: {},
+          postgres_changes: [{ event: 'UPDATE', schema: 'public', table: 'podaci' }]
+        }
+      },
+      ref: '1'
+    }));
+  };
+
+  ws.onmessage = async (msg) => {
+    let d;
+    try { d = JSON.parse(msg.data); } catch { return; }
+
+    // Potvrda spajanja (phx_reply na join)
+    if(d.event === 'phx_reply' && d.payload && d.payload.status === 'ok') {
+      rtSetStatus('live');
+      return;
+    }
+
+    // Postgres UPDATE event
+    if(d.event === 'postgres_changes') {
+      const uid = d.payload && d.payload.data && d.payload.data.record
+        ? d.payload.data.record.user_id : null;
+      if(!uid) return;
+      const ADMIN_UIDS = ['d884494d-6be2-4a70-8314-b7d4f60cd381'];
+      if(ADMIN_UIDS.includes(uid)) return;
+      try {
+        const fresh = await sbFetchFresh(uid);
+        const row = allRows.find(r => r.user_id === uid);
+        if(row) {
+          row.sadrzaj = fresh.sadrzaj;
+          renderFotografi();
+          renderNalozi();
+          if(uid === selUid) toast('↺ Ažurirano u realnom vremenu');
+        }
+      } catch(e) {
+        console.warn('RT fetch error:', e.message);
+      }
+    }
+  };
+
+  // Heartbeat svakih 30s (Supabase zahtijeva)
+  const hb = setInterval(() => {
+    if(ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ topic: 'phoenix', event: 'heartbeat', payload: {}, ref: null }));
+    } else {
+      clearInterval(hb);
+    }
+  }, 30000);
+
+  ws.onerror = () => rtSetStatus('err');
+
+  ws.onclose = () => {
+    clearInterval(hb);
+    rtSetStatus('err');
+    if(jwt) _rtRetry = setTimeout(startRealtime, 5000);
+  };
+}
+
+function stopRealtime() {
+  clearTimeout(_rtRetry);
+  if(_rtWs) { try { _rtWs.close(); } catch(_){} _rtWs = null; }
+  rtSetStatus('off');
+}
+
 // ── REFRESH ──
 async function refreshAll() {
   const ok = await loadAll();
@@ -824,6 +926,7 @@ async function startApp() {
     renderNalozi();
     // Auto-selektiraj sebe
     if(myUid && allRows.find(r => r.user_id === myUid)) selFotograf(myUid);
+    startRealtime();
   }
 }
 
