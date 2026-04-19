@@ -2,7 +2,7 @@
 // Strategija: Network First — admin uvijek treba svježe podatke
 // Shell (HTML) se keširа samo kao fallback za offline prikaz
 
-const CACHE = 'adriatic-nalozi-v1.0.1.';
+const CACHE = 'adriatic-nalozi-v1.0.0.';
 const SHELL = ['./index.html'];
 
 // Install — keširaj shell
