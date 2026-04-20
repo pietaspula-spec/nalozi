@@ -3,15 +3,16 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Adriatic Nalozi v2</title>
+<title>Adriatic Nalozi v3.0</title>
 <link rel="manifest" href="manifest-nalozi.json">
 <meta name="theme-color" content="#0b0c0e" id="themeColorMeta">
-<meta name="description" content="Upravljanje nalozima — Adriatic.hr">
+<meta name="description" content="Upravljanje nalozima i obračunima — Adriatic.hr">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Adriatic Nalozi">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 :root{
   --bg:#0b0c0e;--surf:#13151a;--surf2:#1a1d25;--surf3:#21252f;
@@ -23,10 +24,7 @@
   --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
   --r:10px;--lw:272px;
 }
-body.light{
-  --bg:#f0f2f5;--surf:#fff;--surf2:#e8eaf0;--surf3:#dde0e8;
-  --brd:#d0d4de;--brd2:#b8bdd0;--txt:#1a1d25;--mut:#8892a4;--mut2:#636b80;
-}
+body.light{--bg:#f0f2f5;--surf:#fff;--surf2:#e8eaf0;--surf3:#dde0e8;--brd:#d0d4de;--brd2:#b8bdd0;--txt:#1a1d25;--mut:#8892a4;--mut2:#636b80}
 body.light input,body.light select,body.light textarea{background:#f8f9fc;border-color:#c8cdd8;color:#1a1a2e}
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;overflow:hidden}
@@ -34,68 +32,81 @@ body{background:var(--bg);color:var(--txt);font-family:var(--sans);transition:ba
 
 /* ── HEADER ── */
 header{height:52px;background:var(--surf);border-bottom:1px solid var(--brd);
-  display:flex;align-items:center;gap:10px;padding:0 16px;
+  display:flex;align-items:center;gap:10px;padding:0 14px;
   position:fixed;top:0;left:0;right:0;z-index:200}
 .hlogo{font-size:1rem;font-weight:800;color:var(--acc);letter-spacing:-.5px;white-space:nowrap}
 .hlogo small{color:var(--mut2);font-weight:400;font-size:.73rem;margin-left:5px}
-.hright{margin-left:auto;display:flex;align-items:center;gap:8px}
+.hright{margin-left:auto;display:flex;align-items:center;gap:7px}
 .huser{font-size:.7rem;color:var(--mut2);font-family:var(--mono)}
-
-/* theme slider (identičan FotoKalk) */
 .theme-sl{position:relative;display:inline-flex;align-items:center;width:52px;height:28px;cursor:pointer;flex-shrink:0}
 .theme-sl-track{position:absolute;inset:0;border-radius:28px;background:var(--brd2);border:1px solid var(--brd2);transition:background .25s}
 body.light .theme-sl-track{background:#d0d4dd}
 .theme-sl-knob{position:absolute;left:3px;top:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:transform .25s;display:flex;align-items:center;justify-content:center;font-size:12px;box-shadow:0 1px 4px rgba(0,0,0,.3)}
 body.light .theme-sl-knob{transform:translateX(24px)}
-
-.hbtn{background:transparent;border:1px solid var(--brd2);color:var(--mut2);
-  font-family:var(--sans);font-size:.72rem;font-weight:700;padding:5px 11px;
-  border-radius:6px;cursor:pointer;transition:all .18s}
+.hbtn{background:transparent;border:1px solid var(--brd2);color:var(--mut2);font-family:var(--sans);font-size:.72rem;font-weight:700;padding:5px 11px;border-radius:6px;cursor:pointer;transition:all .18s}
 .hbtn:hover{border-color:var(--red);color:var(--red)}
 .hbtn.bl{border-color:var(--blu);color:var(--blu)}.hbtn.bl:hover{background:rgba(96,165,250,.1)}
+.hmenu-btn{width:34px;height:34px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:4px;background:transparent;border:1px solid var(--brd2);border-radius:7px;cursor:pointer;flex-shrink:0;transition:all .18s}
+.hmenu-btn .hml{display:block;width:14px;height:2px;background:var(--mut2);border-radius:2px;transition:background .18s}
+.hmenu-btn:hover .hml{background:var(--acc)}
+.hmenu-btn:hover{border-color:var(--acc)}
+
+/* ── SETTINGS DRAWER ── */
+.sdbg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:600}
+.sdbg.on{display:block}
+.sdrawer{position:fixed;top:0;right:0;bottom:0;width:320px;max-width:94vw;
+  background:var(--surf);border-left:1px solid var(--brd);
+  z-index:601;transform:translateX(100%);transition:transform .28s cubic-bezier(.4,0,.2,1);
+  display:flex;flex-direction:column;overflow:hidden}
+.sdrawer.on{transform:translateX(0)}
+.sdhd{padding:14px 15px;border-bottom:1px solid var(--brd);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;height:52px}
+.sdhd-title{font-size:.78rem;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:var(--mut2)}
+.sdbody{flex:1;overflow-y:auto;padding:14px 15px}
+.sdbody::-webkit-scrollbar{width:4px}
+.sdbody::-webkit-scrollbar-thumb{background:var(--brd2);border-radius:4px}
+.sdsec{margin-bottom:20px}
+.sdsec-title{font-size:.58rem;font-weight:700;letter-spacing:1.8px;text-transform:uppercase;color:var(--mut2);margin-bottom:11px;padding-bottom:6px;border-bottom:1px solid var(--brd)}
+.sdrow{margin-bottom:9px}
+.sdrow label{font-size:.7rem;color:var(--mut2);font-weight:600;display:block;margin-bottom:4px}
+.sdrow input,.sdrow select{width:100%;background:var(--surf2);border:1px solid var(--brd);border-radius:7px;color:var(--txt);font-family:var(--mono);font-size:.85rem;padding:7px 10px;outline:none;transition:border-color .18s}
+.sdrow input:focus,.sdrow select:focus{border-color:var(--acc)}
+body.light .sdrow input,body.light .sdrow select{background:#f8f9fc;border-color:#c8cdd8;color:#1a1a2e}
+.sd-note{font-size:.67rem;color:var(--mut);font-style:italic;margin-top:4px;line-height:1.5}
 
 /* ── LAYOUT ── */
 .app-body{position:fixed;top:52px;left:0;right:0;bottom:0;display:flex;overflow:hidden}
-
-/* ── LEFT PANEL ── */
-.lp{width:var(--lw);flex-shrink:0;background:var(--surf);border-right:2px solid var(--brd);
-  display:flex;flex-direction:column;overflow:hidden}
-.lp-hd{padding:11px 13px;border-bottom:1px solid var(--brd);
-  display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.lp{width:var(--lw);flex-shrink:0;background:var(--surf);border-right:2px solid var(--brd);display:flex;flex-direction:column;overflow:hidden}
+.lp-hd{padding:11px 13px;border-bottom:1px solid var(--brd);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
 .lp-title{font-size:.59rem;font-weight:700;letter-spacing:1.9px;text-transform:uppercase;color:var(--mut2)}
 .lp-cnt{font-size:.65rem;color:var(--mut);font-family:var(--mono)}
 .lp-srch{padding:7px 10px;border-bottom:1px solid var(--brd);flex-shrink:0}
-.lp-srch input{width:100%;background:var(--surf2);border:1px solid var(--brd);border-radius:7px;
-  color:var(--txt);font-size:.82rem;padding:6px 10px;outline:none;transition:border-color .18s;font-family:var(--sans)}
+.lp-srch input{width:100%;background:var(--surf2);border:1px solid var(--brd);border-radius:7px;color:var(--txt);font-size:.82rem;padding:6px 10px;outline:none;transition:border-color .18s;font-family:var(--sans)}
 .lp-srch input:focus{border-color:var(--acc)}
 .lp-list{flex:1;overflow-y:auto;padding:4px 0 8px}
 .lp-list::-webkit-scrollbar{width:4px}
 .lp-list::-webkit-scrollbar-thumb{background:var(--brd2);border-radius:4px}
-.fi{padding:9px 13px 8px;cursor:pointer;transition:background .13s;
-  position:relative;border-left:3px solid transparent;user-select:none}
+.fi{padding:9px 13px 8px;cursor:pointer;transition:background .13s;position:relative;border-left:3px solid transparent;user-select:none}
 .fi:hover{background:var(--surf2)}
 .fi.active{background:rgba(240,192,64,.07);border-left-color:var(--acc)}
-.fi-name{font-size:.88rem;font-weight:700;padding-right:40px;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fi-name{font-size:.88rem;font-weight:700;padding-right:40px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .fi-sub{font-size:.67rem;color:var(--mut2);margin-top:2px;font-family:var(--mono)}
-.fi-bdg{position:absolute;right:10px;top:50%;transform:translateY(-50%);
-  font-size:.6rem;font-weight:700;padding:2px 7px;border-radius:10px}
+.fi-bdg{position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:.6rem;font-weight:700;padding:2px 7px;border-radius:10px}
 .bc{background:rgba(240,192,64,.15);color:var(--acc);border:1px solid rgba(240,192,64,.35)}
 .bg{background:rgba(52,211,153,.12);color:var(--grn);border:1px solid rgba(52,211,153,.3)}
 .bm{background:var(--surf3);color:var(--mut);border:1px solid var(--brd)}
 
 /* ── RIGHT PANEL ── */
 .rp{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
-.rp-hd{padding:11px 16px;border-bottom:1px solid var(--brd);
-  display:flex;align-items:center;gap:10px;flex-shrink:0;background:var(--surf)}
+.rp-hd{padding:11px 16px;border-bottom:1px solid var(--brd);display:flex;align-items:center;gap:10px;flex-shrink:0;background:var(--surf)}
 .rp-who{flex:1;min-width:0}
 .rp-lbl{font-size:.59rem;font-weight:700;letter-spacing:1.8px;text-transform:uppercase;color:var(--mut2);margin-bottom:2px}
 .rp-nm{font-size:.98rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.rp-fr{padding:9px 16px;border-bottom:1px solid var(--brd);
-  display:flex;gap:6px;align-items:center;flex-shrink:0;background:var(--surf)}
-.ft{background:transparent;border:1px solid var(--brd);color:var(--mut2);
-  font-family:var(--sans);font-size:.72rem;font-weight:600;padding:4px 12px;
-  border-radius:20px;cursor:pointer;transition:all .18s}
+.vt-bar{padding:0 16px;border-bottom:1px solid var(--brd);background:var(--surf);display:flex;gap:0;flex-shrink:0}
+.vt{background:transparent;border:none;border-bottom:3px solid transparent;color:var(--mut2);font-family:var(--sans);font-size:.76rem;font-weight:700;padding:9px 14px;cursor:pointer;transition:color .15s,border-color .15s;margin-bottom:-1px;white-space:nowrap;display:flex;align-items:center;gap:5px}
+.vt.on{color:var(--acc);border-bottom-color:var(--acc)}
+.vt:hover:not(.on){color:var(--txt)}
+.rp-fr{padding:9px 16px;border-bottom:1px solid var(--brd);display:flex;gap:6px;align-items:center;flex-shrink:0;background:var(--surf)}
+.ft{background:transparent;border:1px solid var(--brd);color:var(--mut2);font-family:var(--sans);font-size:.72rem;font-weight:600;padding:4px 12px;border-radius:20px;cursor:pointer;transition:all .18s}
 .ft.on{background:var(--acc);color:#000;border-color:var(--acc)}
 .ft:hover:not(.on){border-color:var(--acc);color:var(--acc)}
 .rp-list{flex:1;overflow-y:auto;padding:14px 16px}
@@ -103,119 +114,200 @@ body.light .theme-sl-knob{transform:translateX(24px)}
 .rp-list::-webkit-scrollbar-thumb{background:var(--brd2);border-radius:4px}
 
 /* ── PLAN CARD ── */
-.pc{background:var(--surf);border:1px solid var(--brd);border-radius:var(--r);
-  padding:13px 15px;margin-bottom:10px;border-left:4px solid var(--brd)}
-.pc.ceka{border-left-color:var(--acc)}
-.pc.nodatum{border-left-color:var(--mut);border-left-style:dashed}
-.pc.obavljeno{border-left-color:var(--grn)}
-.pc.otkazano{border-left-color:var(--red);opacity:.65}
+.pc{background:var(--surf);border:1px solid var(--brd);border-radius:var(--r);padding:13px 15px;margin-bottom:10px;border-left:4px solid var(--brd)}
+.pc.ceka{border-left-color:var(--acc)}.pc.nodatum{border-left-color:var(--mut);border-left-style:dashed}
+.pc.obavljeno{border-left-color:var(--grn)}.pc.otkazano{border-left-color:var(--red);opacity:.65}
 .pc-dt{font-size:1rem;font-weight:700;margin-bottom:5px;color:var(--txt)}
-.ps{font-size:.68rem;font-weight:700;padding:2px 8px;border-radius:20px;
-  border:1px solid;display:inline-block;margin-bottom:8px}
+.ps{font-size:.68rem;font-weight:700;padding:2px 8px;border-radius:20px;border:1px solid;display:inline-block;margin-bottom:8px}
 .ps.ceka{background:rgba(240,192,64,.12);color:var(--acc);border-color:rgba(240,192,64,.3)}
 .ps.obavljeno{background:rgba(52,211,153,.12);color:var(--grn);border-color:rgba(52,211,153,.3)}
 .ps.otkazano{background:rgba(248,113,113,.1);color:var(--red);border-color:rgba(248,113,113,.3)}
 .ps.nodatum{background:rgba(99,107,128,.1);color:var(--mut2);border-color:rgba(99,107,128,.3)}
-.pr{font-size:.8rem;color:var(--mut2);margin-bottom:4px;
-  display:flex;align-items:flex-start;gap:6px}
+.pr{font-size:.8rem;color:var(--mut2);margin-bottom:4px;display:flex;align-items:flex-start;gap:6px}
 .pr a{color:var(--blu);text-decoration:none}.pr a:hover{text-decoration:underline}
 .pnote{font-size:.74rem;color:var(--mut);font-style:italic;margin:4px 0 8px}
-.pac{display:flex;gap:5px;margin-top:9px;padding-top:8px;
-  border-top:1px solid var(--brd);flex-wrap:wrap;align-items:center}
-/* readonly status badge (ne gumb) */
-.stat-ro{font-size:.68rem;color:var(--mut);font-style:italic;
-  display:flex;align-items:center;gap:5px}
+.pac{display:flex;gap:5px;margin-top:9px;padding-top:8px;border-top:1px solid var(--brd);flex-wrap:wrap;align-items:center}
+.stat-ro{font-size:.68rem;color:var(--mut);font-style:italic;display:flex;align-items:center;gap:5px}
 .stat-ro svg{opacity:.45}
 
+/* ── OBRAČUN CARD ── */
+.obr-card{background:var(--surf);border:1px solid var(--brd);border-radius:var(--r);padding:13px 15px;margin-bottom:10px;border-left:4px solid var(--grn)}
+.obr-card.empty-obr{border-left-color:var(--brd2);border-left-style:dashed}
+.obr-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px}
+.obr-title{font-size:.88rem;font-weight:700;line-height:1.3}
+.obr-sub{font-size:.7rem;color:var(--mut2);margin-top:3px;font-family:var(--mono)}
+.obr-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-top:9px}
+.obr-cell{background:var(--surf2);border-radius:6px;padding:6px 9px}
+.obr-cell-lbl{font-size:.58rem;color:var(--mut2);font-weight:700;text-transform:uppercase;letter-spacing:.8px}
+.obr-cell-val{font-size:.83rem;font-weight:700;font-family:var(--mono);margin-top:2px}
+.obr-total{background:rgba(52,211,153,.08);border:1px solid rgba(52,211,153,.22);border-radius:8px;padding:8px 13px;margin-top:9px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.obr-total-lbl{font-size:.68rem;font-weight:700;color:var(--grn);text-transform:uppercase;letter-spacing:.8px}
+.obr-total-val{font-size:1.05rem;font-weight:800;font-family:var(--mono);color:var(--grn)}
+.obr-neto-row{display:flex;align-items:center;justify-content:space-between;margin-top:4px}
+.obr-neto-lbl{font-size:.68rem;font-weight:700;color:var(--acc);text-transform:uppercase;letter-spacing:.8px}
+.obr-neto-val{font-size:.9rem;font-weight:700;font-family:var(--mono);color:var(--acc)}
+
+/* ── IZVJEŠTAJI ── */
+.iz-topbar{display:flex;align-items:center;gap:7px;margin-bottom:12px;flex-wrap:wrap}
+.iz-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px}
+.iz-stat{background:var(--surf);border:1px solid var(--brd);border-radius:8px;padding:10px;text-align:center}
+.iz-stat-val{font-size:.95rem;font-weight:800;font-family:var(--mono);color:var(--acc)}
+.iz-stat-lbl{font-size:.58rem;color:var(--mut2);margin-top:2px;font-weight:600}
+.iz-month-hd{font-size:.65rem;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--acc);padding:10px 0 6px;border-top:1px solid var(--brd);margin-top:4px}
+.iz-month-hd:first-of-type{border-top:none;margin-top:0}
+.iz-tbl{width:100%;border-collapse:collapse;font-size:.72rem;margin-bottom:12px}
+.iz-tbl th{background:var(--surf2);padding:5px 7px;text-align:left;font-size:.58rem;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--mut2);border-bottom:1px solid var(--brd);white-space:nowrap}
+.iz-tbl th.grp{background:var(--surf3);font-size:.62rem;text-align:center;border-bottom:1px solid var(--brd2)}
+.iz-tbl td{padding:5px 7px;border-bottom:1px solid var(--brd);white-space:nowrap;font-size:.72rem}
+.iz-tbl tr:last-child td{border-bottom:none}
+.iz-tbl tr:hover td{background:var(--surf2)}
+.iz-tbl .num{text-align:right;font-family:var(--mono)}
+.iz-tbl .tot{font-weight:700;color:var(--grn);font-family:var(--mono);text-align:right}
+.iz-tbl .neto-val{font-weight:700;color:var(--acc);font-family:var(--mono);text-align:right}
+.iz-tbl .totrow td{background:rgba(52,211,153,.06);font-weight:700}
+.iz-tbl .otkaz-row td{opacity:.65}
+
 /* ── BUTTONS ── */
-.btn{font-family:var(--sans);font-weight:700;font-size:.78rem;padding:8px 15px;
-  border-radius:7px;border:none;cursor:pointer;transition:all .18s;
-  display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+.btn{font-family:var(--sans);font-weight:700;font-size:.78rem;padding:8px 15px;border-radius:7px;border:none;cursor:pointer;transition:all .18s;display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
 .bp{background:var(--acc);color:#000}.bp:hover{background:var(--acc2)}
 .bo{background:transparent;border:1px solid var(--brd2);color:var(--mut2)}
 .bo:hover{border-color:var(--acc);color:var(--acc)}
+.bd{background:transparent;border:1px solid rgba(248,113,113,.4);color:var(--red)}
+.bd:hover{background:rgba(248,113,113,.1)}
 .bsm{font-size:.7rem;padding:4px 10px}
+.bgrn{background:var(--grn);color:#000}.bgrn:hover{background:#22a374}
 
 /* ── MODAL ── */
-.mbg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);
-  z-index:500;align-items:center;justify-content:center}
+.mbg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:500;align-items:center;justify-content:center}
 .mbg.on{display:flex}
-.modal{background:var(--surf);border-radius:14px;padding:24px 22px 28px;
-  width:520px;max-width:96vw;max-height:92vh;overflow-y:auto;
-  box-shadow:0 12px 48px rgba(0,0,0,.7)}
+.modal{background:var(--surf);border-radius:14px;padding:24px 22px 28px;width:580px;max-width:96vw;max-height:94vh;overflow-y:auto;box-shadow:0 12px 48px rgba(0,0,0,.7)}
 .mt{font-size:1.05rem;font-weight:700;margin-bottom:4px}
 .msub{font-size:.72rem;color:var(--mut2);margin-bottom:18px;line-height:1.5}
 .ma{display:flex;gap:8px;margin-top:18px;justify-content:flex-end;align-items:center}
-/* FORM */
 .fr{display:grid;gap:10px;margin-bottom:10px}
-.c2{grid-template-columns:1fr 1fr}
+.c2{grid-template-columns:1fr 1fr}.c3{grid-template-columns:1fr 1fr 1fr}
 label{font-size:.72rem;color:var(--mut2);font-weight:600;display:block;margin-bottom:4px}
-input,select,textarea{width:100%;background:var(--surf2);border:1px solid var(--brd);
-  border-radius:7px;color:var(--txt);font-family:var(--sans);font-size:.85rem;
-  padding:8px 10px;outline:none;transition:border-color .18s}
+input,select,textarea{width:100%;background:var(--surf2);border:1px solid var(--brd);border-radius:7px;color:var(--txt);font-family:var(--sans);font-size:.85rem;padding:8px 10px;outline:none;transition:border-color .18s}
 input:focus,select:focus,textarea:focus{border-color:var(--acc)}
+input[type=checkbox]{width:auto;cursor:pointer}
+input[type=number]{-moz-appearance:textfield}
+input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none}
+input[type=date]::-webkit-calendar-picker-indicator{opacity:.5;cursor:pointer}
 select option{background:var(--surf2)}
 textarea{resize:vertical;min-height:58px;font-size:.82rem;line-height:1.5}
-/* INFO BOX */
-.ib{background:rgba(96,165,250,.07);border:1px solid rgba(96,165,250,.2);
-  border-radius:8px;padding:8px 12px;font-size:.72rem;color:var(--blu);
-  line-height:1.6;margin-bottom:14px}
+.ib{background:rgba(96,165,250,.07);border:1px solid rgba(96,165,250,.2);border-radius:8px;padding:8px 12px;font-size:.72rem;color:var(--blu);line-height:1.6;margin-bottom:14px}
+.wb{background:rgba(248,113,113,.07);border:1px solid rgba(248,113,113,.2);border-radius:8px;padding:8px 12px;font-size:.72rem;color:var(--red);line-height:1.6}
+
+/* CALC BOX */
+.calc-box{background:var(--surf2);border:1px solid var(--brd);border-radius:8px;padding:12px 14px;margin-top:4px;margin-bottom:4px}
+.calc-sec{font-size:.58rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--mut2);margin:8px 0 5px;padding-top:8px;border-top:1px solid var(--brd)}
+.calc-sec:first-child{margin-top:0;padding-top:0;border-top:none}
+.calc-row{display:flex;justify-content:space-between;align-items:center;font-size:.78rem;color:var(--mut2);padding:2px 0}
+.calc-row.minus{color:var(--red)}
+.calc-row.plus{color:var(--grn)}
+.calc-row.total{font-weight:700;color:var(--txt);font-size:.83rem;padding-top:6px;margin-top:4px;border-top:1px solid var(--brd2)}
+.calc-row.neto{font-weight:800;color:var(--acc);font-size:.95rem;padding-top:6px;margin-top:4px;border-top:2px solid var(--acc2)}
+.calc-row span.mono{font-family:var(--mono)}
+
+/* Checkbox label */
+.chk-lbl{display:flex;align-items:center;gap:9px;cursor:pointer;background:var(--surf2);border:1px solid var(--brd);border-radius:8px;padding:9px 12px;transition:border-color .15s}
+.chk-lbl:hover{border-color:var(--acc)}
+.chk-lbl input[type=checkbox]{width:16px;height:16px;accent-color:var(--acc)}
+.chk-lbl span{font-size:.82rem;font-weight:600}
+.chk-lbl.checked-on{border-color:var(--acc);background:rgba(240,192,64,.05)}
 
 /* ── LOGIN ── */
-#loginScreen{position:fixed;inset:0;background:var(--bg);z-index:900;
-  display:flex;align-items:center;justify-content:center}
-.lbox{background:var(--surf);border:1px solid var(--brd);border-radius:16px;
-  padding:32px 28px;width:360px;max-width:92vw;box-shadow:0 12px 48px rgba(0,0,0,.6)}
+#loginScreen{position:fixed;inset:0;background:var(--bg);z-index:900;display:flex;align-items:center;justify-content:center}
+.lbox{background:var(--surf);border:1px solid var(--brd);border-radius:16px;padding:32px 28px;width:360px;max-width:92vw;box-shadow:0 12px 48px rgba(0,0,0,.6)}
 .ll{font-size:1.55rem;font-weight:800;color:var(--acc);letter-spacing:-.5px;margin-bottom:3px}
 .ls{font-size:.8rem;color:var(--mut2);margin-bottom:24px}
 .lf{margin-bottom:13px}
 .lf label{font-size:.72rem;color:var(--mut2);font-weight:600;display:block;margin-bottom:5px}
-.lf input{width:100%;background:var(--surf2);border:1px solid var(--brd);border-radius:8px;
-  color:var(--txt);font-size:.9rem;padding:11px 13px;outline:none;transition:border-color .18s;font-family:var(--sans)}
+.lf input{width:100%;background:var(--surf2);border:1px solid var(--brd);border-radius:8px;color:var(--txt);font-size:.9rem;padding:11px 13px;outline:none;transition:border-color .18s;font-family:var(--sans)}
 .lf input:focus{border-color:var(--blu)}
 #lErr{font-size:.74rem;color:var(--red);margin-bottom:10px;display:none;line-height:1.5}
-#lBtn{width:100%;padding:12px;background:var(--acc);color:#000;font-weight:700;
-  font-size:.92rem;border:none;border-radius:10px;cursor:pointer;font-family:var(--sans)}
+#lBtn{width:100%;padding:12px;background:var(--acc);color:#000;font-weight:700;font-size:.92rem;border:none;border-radius:10px;cursor:pointer;font-family:var(--sans)}
 #lBtn:hover{background:var(--acc2)}
 #lBtn:disabled{opacity:.5;cursor:not-allowed}
 
-/* ── TOAST ── */
-.toast{position:fixed;bottom:20px;right:20px;background:var(--acc);color:#000;
-  font-family:var(--sans);font-weight:700;font-size:.78rem;padding:9px 16px;
-  border-radius:8px;z-index:999;opacity:0;transform:translateY(8px);
-  transition:all .25s;pointer-events:none;max-width:320px}
+/* ── TOAST / MISC ── */
+.toast{position:fixed;bottom:20px;right:20px;background:var(--acc);color:#000;font-family:var(--sans);font-weight:700;font-size:.78rem;padding:9px 16px;border-radius:8px;z-index:999;opacity:0;transform:translateY(8px);transition:all .25s;pointer-events:none;max-width:320px}
 .toast.on{opacity:1;transform:translateY(0)}.toast.err{background:var(--red);color:#fff}
-
-/* ── CONFIRM ── */
-.cbg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);
-  z-index:1000;align-items:center;justify-content:center}
+.cbg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:1000;align-items:center;justify-content:center}
 .cbg.on{display:flex}
 .cbox{background:var(--surf);border-radius:14px;padding:22px 20px;width:300px;max-width:90vw}
 .cmsg{font-size:.9rem;font-weight:600;margin-bottom:18px;line-height:1.5}
 .cbtn{display:flex;gap:8px;justify-content:flex-end}
-
-/* ── MISC ── */
 .empty{text-align:center;padding:48px 20px;color:var(--mut);font-size:.82rem;line-height:1.9}
 .ei{font-size:2.2rem;opacity:.35;margin-bottom:8px}
 .loading{display:flex;align-items:center;justify-content:center;padding:40px;color:var(--mut);gap:10px;font-size:.82rem}
-.sp{width:18px;height:18px;border:2px solid var(--brd2);border-top-color:var(--acc);
-  border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0}
+.sp{width:18px;height:18px;border:2px solid var(--brd2);border-top-color:var(--acc);border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0}
 @keyframes spin{to{transform:rotate(360deg)}}
 .sdot{width:7px;height:7px;border-radius:50%;background:var(--mut);display:inline-block;flex-shrink:0}
 .sdot.ok{background:var(--grn)}.sdot.err{background:var(--red)}
 .sdot.busy{background:var(--acc);animation:pulse .9s ease-in-out infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
-/* ── REALTIME DOT ── */
 .rt-wrap{display:flex;align-items:center;gap:5px;font-size:.65rem;color:var(--mut);font-family:var(--mono);white-space:nowrap}
 .rt-dot{width:7px;height:7px;border-radius:50%;background:var(--mut);flex-shrink:0;transition:background .4s}
 .rt-dot.live{background:var(--grn);box-shadow:0 0 0 2px rgba(52,211,153,.25);animation:rtpulse 2.5s ease-in-out infinite}
 .rt-dot.err{background:var(--red)}
 @keyframes rtpulse{0%,100%{box-shadow:0 0 0 2px rgba(52,211,153,.25)}50%{box-shadow:0 0 0 5px rgba(52,211,153,0)}}
 
-/* new nalog badge */
-.new-badge{font-size:.6rem;font-weight:700;padding:1px 6px;border-radius:10px;
-  background:rgba(96,165,250,.15);color:var(--blu);border:1px solid rgba(96,165,250,.3);
-  vertical-align:middle;margin-left:5px}
+/* ── PRINT — A4 LANDSCAPE ── */
+.print-header{display:none}
+@media print{
+  @page{size:A4 landscape;margin:8mm 10mm}
+  html,body{overflow:visible!important;height:auto!important;background:#fff!important;color:#000!important;font-size:9px}
+  body *{transition:none!important}
+  header,.lp,.vt-bar,.rp-hd,.rp-fr,.iz-topbar,.sdbg,.sdrawer,.cbg,.mbg,.toast,
+  .hmenu-btn,.hbtn,.theme-sl,.btn,.ft,.pac,.obr-card,.iz-stats{display:none!important}
+  .app-body{position:static!important;overflow:visible!important;height:auto!important}
+  .rp{position:static!important;overflow:visible!important;height:auto!important;min-width:0!important}
+  .rp-list{overflow:visible!important;height:auto!important;padding:0!important}
+
+  /* ── PRINT HEADER ── */
+  .print-header{display:block!important;margin-bottom:10px}
+  .ph-top{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:6px;border-bottom:2.5px solid #1a1a2e;margin-bottom:6px}
+  .ph-brand-block{}
+  .ph-brand{font-size:15px;font-weight:900;color:#1a1a2e;letter-spacing:-.3px;line-height:1}
+  .ph-brand span{color:#e8b84b}
+  .ph-tagline{font-size:8px;color:#666;margin-top:2px;letter-spacing:.3px}
+  .ph-meta{text-align:right;font-size:8px;color:#555;line-height:1.8}
+  .ph-meta .ph-foto-name{font-size:13px;font-weight:900;color:#1a1a2e;line-height:1.2}
+  .ph-meta .ph-oib{font-size:8px;color:#888;font-family:monospace}
+  .ph-title-bar{background:#1a1a2e;color:#fff;padding:5px 10px;border-radius:4px;display:flex;justify-content:space-between;align-items:center}
+  .ph-title-bar .ph-title{font-size:10px;font-weight:800;letter-spacing:.8px;text-transform:uppercase}
+  .ph-title-bar .ph-period{font-size:9px;color:#e8b84b;font-weight:700}
+  .ph-title-bar .ph-date{font-size:8px;color:#aaa}
+
+  /* ── TABLE ── */
+  .iz-month-hd{color:#000!important;font-size:8px!important;border-top:2px solid #555!important;padding:5px 0 3px!important;margin-top:8px!important;font-weight:900;letter-spacing:1.5px}
+  .iz-month-hd:first-of-type{border-top:none!important;margin-top:0!important}
+  .iz-tbl{font-size:7px!important;margin-bottom:8px!important;width:100%!important;border-collapse:collapse!important}
+  .iz-tbl th.grp{background:#1a1a2e!important;color:#fff!important;font-size:6.5px!important;text-align:center!important;padding:3px 6px!important;border:1px solid #1a1a2e!important}
+  .iz-tbl th{background:#e8eaf2!important;color:#1a1a2e!important;border-top:1px solid #b0b8d0!important;border-bottom:1px solid #b0b8d0!important;border-left:none!important;border-right:none!important;padding:3px 5px!important;font-size:6.5px!important;font-weight:700}
+  .iz-tbl td{border-top:none!important;border-bottom:1px solid #e8eaf2!important;border-left:none!important;border-right:none!important;color:#111!important;background:#fff!important;padding:3px 5px!important}
+  .iz-tbl .tot{color:#1a1a2e!important;font-weight:800!important}
+  .iz-tbl .neto-val{color:#1a1a2e!important;font-weight:800!important}
+  .iz-tbl tr:hover td{background:#fff!important}
+  .iz-tbl .totrow td{background:#f5f7ff!important;color:#1a1a2e!important;font-weight:800!important;border-top:1.5px solid #1a1a2e!important;border-bottom:1.5px solid #1a1a2e!important}
+  .iz-tbl .totrow .neto-val{color:#1a1a2e!important;font-weight:900!important}
+  .iz-tbl .otkaz-row td{opacity:.6!important}
+
+  /* ── FOOTER ── */
+  .print-footer{display:block!important;margin-top:14px}
+  .pf-box{border:none;padding:10px 16px;font-size:9px;color:#111;line-height:2.6}
+  .pf-box .pf-r1{padding:4px 0 4px 0}
+  .pf-box .pf-r2{padding:4px 0 4px 0}
+  .pf-box .pf-r3{padding:4px 0 4px 0}
+  .pf-box .pf-r4{padding:4px 0 4px 0}
+  .pf-box b{font-weight:800}
+  .pf-uline{display:inline-block;border-bottom:1px solid #333;min-width:200px;margin:0 4px}
+  .pf-uline-short{display:inline-block;border-bottom:1px solid #333;min-width:120px;margin:0 4px}
+  .pf-uline-long{display:inline-block;border-bottom:1px solid #333;min-width:260px;margin:0 4px}
+  .pf-app{text-align:right;font-size:7px;color:#aaa;margin-top:5px}
+}
+.print-footer{display:none}
 </style>
 </head>
 <body>
@@ -224,7 +316,7 @@ textarea{resize:vertical;min-height:58px;font-size:.82rem;line-height:1.5}
 <div id="loginScreen">
   <div class="lbox">
     <div class="ll">📷 Adriatic Nalozi</div>
-    <div class="ls">Upravljanje nalozima — Adriatic.hr</div>
+    <div class="ls">Upravljanje nalozima i obračunima — Adriatic.hr</div>
     <div class="lf"><label>E-mail</label>
       <input type="email" id="lEmail" placeholder="your@email.com" autocomplete="email"></div>
     <div class="lf" style="margin-bottom:16px"><label>Lozinka</label>
@@ -237,41 +329,32 @@ textarea{resize:vertical;min-height:58px;font-size:.82rem;line-height:1.5}
 <!-- APP -->
 <div id="app" style="display:none">
   <header>
-    <div class="hlogo">📷 Adriatic Nalozi <small>admin</small></div>
+    <div class="hlogo">📷 Adriatic Nalozi <small>v3</small></div>
     <div class="hright">
-      <span class="rt-wrap" id="rtWrap" title="Realtime status">
-        <span class="rt-dot" id="rtDot"></span>
-        <span id="rtLbl">—</span>
-      </span>
+      <span class="rt-wrap" id="rtWrap"><span class="rt-dot" id="rtDot"></span><span id="rtLbl">—</span></span>
       <span class="sdot" id="sdot"></span>
       <span class="huser" id="hEmail"></span>
-      <label class="theme-sl" onclick="toggleTheme()" title="Tema">
+      <label class="theme-sl" onclick="toggleTheme()">
         <div class="theme-sl-track"></div>
         <div class="theme-sl-knob" id="themeKnob">🌙</div>
       </label>
       <button class="hbtn bl" onclick="refreshAll()">↺ Osvježi</button>
-      <a class="hbtn" href="help.html" target="_blank" title="Pomoć">?</a>
       <button class="hbtn" onclick="doLogout()">Odjava</button>
+      <button class="hmenu-btn" onclick="toggleDrawer()" title="Postavke">
+        <span class="hml"></span><span class="hml"></span><span class="hml"></span>
+      </button>
     </div>
   </header>
 
   <div class="app-body">
-
-    <!-- LIJEVI PANEL: FOTOGRAFI -->
+    <!-- LIJEVI PANEL -->
     <div class="lp">
-      <div class="lp-hd">
-        <span class="lp-title">Fotografi</span>
-        <span class="lp-cnt" id="lpCnt"></span>
-      </div>
-      <div class="lp-srch">
-        <input type="text" id="fSrch" placeholder="🔍 Pretraži fotografa…" oninput="renderFotografi()">
-      </div>
-      <div class="lp-list" id="fList">
-        <div class="loading"><div class="sp"></div>Učitavanje…</div>
-      </div>
+      <div class="lp-hd"><span class="lp-title">Fotografi</span><span class="lp-cnt" id="lpCnt"></span></div>
+      <div class="lp-srch"><input type="text" id="fSrch" placeholder="🔍 Pretraži fotografa…" oninput="renderFotografi()"></div>
+      <div class="lp-list" id="fList"><div class="loading"><div class="sp"></div>Učitavanje…</div></div>
     </div>
 
-    <!-- DESNI PANEL: NALOZI -->
+    <!-- DESNI PANEL -->
     <div class="rp">
       <div class="rp-hd">
         <div class="rp-who">
@@ -282,70 +365,232 @@ textarea{resize:vertical;min-height:58px;font-size:.82rem;line-height:1.5}
           <button class="btn bp bsm" id="btnNovi" onclick="openNalog(null)" disabled>+ Novi nalog</button>
         </div>
       </div>
-      <div class="rp-fr">
+      <div class="vt-bar">
+        <button class="vt on" id="vt-nalozi" onclick="setRpView('nalozi')">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Nalozi
+        </button>
+        <button class="vt" id="vt-obracun" onclick="setRpView('obracun')">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>Obračun
+        </button>
+        <button class="vt" id="vt-izvjestaji" onclick="setRpView('izvjestaji')">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>Izvještaji
+        </button>
+      </div>
+      <div class="rp-fr" id="rpFr">
         <button class="ft on" onclick="setFilt('ceka',this)">Na čekanju</button>
         <button class="ft" onclick="setFilt('svi',this)">Svi</button>
         <button class="ft" onclick="setFilt('obavljeno',this)">Obavljeno</button>
         <button class="ft" onclick="setFilt('otkazano',this)">Otkazano</button>
         <span style="margin-left:auto;font-size:.67rem;color:var(--mut);font-family:var(--mono)" id="nCnt"></span>
       </div>
+
+      <!-- PRINT HEADER (vidljiv samo pri ispisu) -->
+      <div class="print-header" id="printHeader">
+        <div class="ph-top">
+          <div class="ph-brand-block">
+            <div class="ph-brand">📷 Adriatic.hr <span>—</span> Obračun honorara</div>
+            <div class="ph-tagline">Izvještaj o ostvarenim autorskim djelima po narudžbi</div>
+          </div>
+          <div class="ph-meta">
+            <div class="ph-foto-name" id="phFoto"></div>
+            <div class="ph-oib" id="phOib"></div>
+          </div>
+        </div>
+        <div class="ph-title-bar">
+          <div class="ph-title" id="phSub">Evidencija fotografiranja i popisivanja</div>
+          <div class="ph-period" id="phPeriod"></div>
+          <div class="ph-date" id="phDatum"></div>
+        </div>
+      </div>
       <div class="rp-list" id="nList">
         <div class="empty"><div class="ei">👈</div>Odaberi fotografa s lijeve strane.</div>
       </div>
+      <div class="print-footer" id="printFooter">
+        <div class="pf-box">
+          <div class="pf-r1">&nbsp;&nbsp;<b>Izvještaj odobrio/la:</b> <b id="pfFotoIme"></b></div>
+          <div class="pf-r2">&nbsp;&nbsp;<b>OIB:</b> <b id="pfOib" style="font-family:monospace;letter-spacing:.5px"></b></div>
+          <div class="pf-r3">&nbsp;&nbsp;<b>Datum:</b><span class="pf-uline-short"></span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<b>mjesto:</b> <b id="pfMjesto"></b></div>
+          <div class="pf-r4">&nbsp;&nbsp;<b>Potpis:</b><span class="pf-uline-long"></span></div>
+        </div>
+        <div class="pf-app">Adriatic Nalozi · Generirano: <span id="pfDatum"></span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SETTINGS DRAWER -->
+<div class="sdbg" id="sdbg" onclick="closeDrawer()"></div>
+<div class="sdrawer" id="sdrawer">
+  <div class="sdhd">
+    <span class="sdhd-title">⚙ Postavke</span>
+    <button class="btn bo bsm" onclick="closeDrawer()">✕</button>
+  </div>
+  <div class="sdbody">
+
+    <!-- 1. Naknade (globalno) -->
+    <div class="sdsec">
+      <div class="sdsec-title">💰 Naknade — Adriatic.hr (globalno)</div>
+      <div class="sdrow"><label>Naknada po kategoriji (€/kat)</label>
+        <input type="number" id="cfg-cp" placeholder="0.00" min="0" step="0.5" oninput="calcObracunLive()"></div>
+      <div class="sdrow"><label>Akvizicija — paušal za prvi unos (€)</label>
+        <input type="number" id="cfg-akv" placeholder="0.00" min="0" step="0.5" oninput="calcObracunLive()"></div>
+      <div class="sdrow"><label>Dron — paušalna naknada (€)</label>
+        <input type="number" id="cfg-dp" placeholder="0.00" min="0" step="0.5" oninput="calcObracunLive()"></div>
+      <div class="sdrow"><label>Putni troškovi (€/km)</label>
+        <input type="number" id="cfg-kr" placeholder="0.00" min="0" step="0.01" oninput="calcObracunLive()"></div>
+      <div class="sdrow"><label>Prag km — ispod praga nema naknade</label>
+        <input type="number" id="cfg-kt" placeholder="0" min="0" step="1" oninput="calcObracunLive()"></div>
+      <div class="sdrow"><label>Propuštena dobit — naknada za otkaz (€)</label>
+        <input type="number" id="cfg-ot" placeholder="0.00" min="0" step="0.5" oninput="calcObracunLive()"></div>
+      <button class="btn bp" style="width:100%;justify-content:center;margin-top:6px" onclick="saveCfgToStorage()">
+        💾 Spremi naknade
+      </button>
+    </div>
+
+    <!-- 2. Porezne postavke po fotografu -->
+    <div class="sdsec">
+      <div class="sdsec-title">📊 Porezne postavke — po fotografu</div>
+      <div class="sdrow"><label>Fotograf</label>
+        <select id="tax-foto-sel" onchange="loadTaxToDrawer()"></select></div>
+      <div class="sdrow"><label>OIB fotografa</label>
+        <input type="text" id="tax-oib" placeholder="npr. 12345678901" maxlength="11" autocomplete="off">
+        <div class="sd-note">OIB se prikazuje na tiskanom izvještaju.</div></div>
+      <div class="sdrow"><label>Grad / općina</label>
+        <select id="tax-grad" onchange="onTaxGradChange()"></select></div>
+      <div class="sdrow"><label>Status fotografa</label>
+        <select id="tax-status" onchange="onTaxStatusChange()">
+          <option value="samostalni">Samostalni umjetnik / obrtnik</option>
+          <option value="zaposlen">Zaposlen kod drugog poslodavca</option>
+          <option value="umirovljenik">Umirovljenik</option>
+        </select></div>
+      <div class="sdrow"><label>Paušalni izdaci (%)</label>
+        <input type="number" id="tax-iz" placeholder="30" min="0" max="100" step="1">
+        <div class="sd-note">Čl.39 ZPD — standardno 30%; uz strukovnu potvrdu 55%</div></div>
+      <div class="sdrow"><label>MIO doprinos (%)</label>
+        <input type="number" id="tax-mio" placeholder="10" min="0" step="0.5"></div>
+      <div class="sdrow"><label>Zdravstveno — ZO (%) — naručiteljev trošak</label>
+        <input type="number" id="tax-zo" placeholder="7.5" min="0" step="0.5"></div>
+      <div class="sdrow"><label>Porez na dohodak — niža stopa (%) <span style="font-size:.6rem;color:var(--grn)">ukupna stopa od 2024.</span></label>
+        <input type="number" id="tax-pd" placeholder="20" min="0" step="0.1">
+        <div class="sd-note">Od 01.01.2024. JLS propisuje jedinstvenu stopu — prirez više nije zasebna dažbina.</div></div>
+      <div class="sdrow"><label>Prirez (%) <span style="font-size:.6rem;color:var(--mut)">samo za ručni prikaz raščlanjivanja — ne utječe na neto</span></label>
+        <input type="number" id="tax-prirez" placeholder="0" min="0" max="18" step="0.1">
+        <div class="sd-note">⚠️ Prirez ukinut od 01.01.2024. Ostavljeno isključivo za informativni prikaz rasčlambe stope u obračunu. Unosi li se prirez ovdje, mora biti već uračunat i u gornju stopu poreza.</div></div>
+      <button class="btn bp" style="width:100%;justify-content:center;margin-top:6px" onclick="saveTaxForFoto()">
+        💾 Spremi porezne postavke
+      </button>
+      <div class="sd-note" style="margin-top:8px">⚠️ Konzultirajte računovođu za točne stope.</div>
+    </div>
+
+    <!-- 3. Backup -->
+    <div class="sdsec">
+      <div class="sdsec-title">📦 Lokalni backup</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <button class="btn bp" style="width:100%;justify-content:center" onclick="backupAll()">⬇ Preuzmi backup (JSON)</button>
+        <button class="btn bo" style="width:100%;justify-content:center" onclick="g('backupInput').click()">⬆ Uvezi backup (JSON)</button>
+        <input type="file" id="backupInput" accept=".json" style="display:none" onchange="importAll(event)">
+      </div>
+      <div class="ib" style="margin-top:10px;font-size:.7rem">ℹ️ Backup sadrži sve obračune, naknade i porezne postavke.</div>
     </div>
 
   </div>
 </div>
 
-<!-- MODAL: NALOG (admin polja) -->
+<!-- MODAL: OBRAČUN -->
+<div class="mbg" id="obrModal" onclick="if(event.target===this)closeObracun()">
+  <div class="modal">
+    <div class="mt">💰 Obračun posla</div>
+    <div class="msub" id="obrSub" style="color:var(--acc);font-weight:600;font-size:.82rem"></div>
+    <div class="ib" id="obrInfo"></div>
+
+    <!-- Datumi i meta -->
+    <div class="fr c3">
+      <div><label>Datum kontaktiranja vlasnika</label>
+        <input type="date" id="obr-dtKontakt"></div>
+      <div><label>Datum isporuke fotografija</label>
+        <input type="date" id="obr-dtIsporuka"></div>
+      <div><label>Dogovoreno od strane</label>
+        <select id="obr-dogovoreno">
+          <option value="Adriatic.hr">Adriatic.hr</option>
+          <option value="Privatni">Privatni nalog</option>
+          <option value="Ostalo">Ostalo</option>
+        </select></div>
+    </div>
+
+    <!-- Količine -->
+    <div class="fr c2">
+      <div><label>Broj fotografiranih kategorija</label>
+        <input type="number" id="obr-kat" placeholder="0" min="0" step="1" oninput="calcObracunLive()"></div>
+      <div><label>Udaljenost — jedna relacija (km)</label>
+        <input type="number" id="obr-km" placeholder="0" min="0" step="0.1" oninput="calcObracunLive()"></div>
+    </div>
+
+    <!-- Checkboxovi -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px;margin-bottom:11px">
+      <label class="chk-lbl" id="lbl-dron">
+        <input type="checkbox" id="obr-dron" onchange="syncChkStyle('lbl-dron','obr-dron');calcObracunLive()">
+        <span>🚁 Dron</span></label>
+      <label class="chk-lbl" id="lbl-akv">
+        <input type="checkbox" id="obr-akv" onchange="syncChkStyle('lbl-akv','obr-akv');calcObracunLive()">
+        <span>🏠 Akvizicija</span></label>
+      <label class="chk-lbl" id="lbl-otkaz">
+        <input type="checkbox" id="obr-otkaz" onchange="syncChkStyle('lbl-otkaz','obr-otkaz');toggleOtkazFields();calcObracunLive()">
+        <span>❌ Otkaz</span></label>
+    </div>
+    <div id="obrOtkazNote" style="display:none;margin-bottom:10px" class="wb">
+      ⚠️ Otkaz: kategorije i dron se ne obračunavaju. Obračunava se: putni trošak + propuštena dobit.
+    </div>
+
+    <div class="fr">
+      <div><label>Ostali troškovi — trajekt, cestarina, itd. (€)</label>
+        <input type="number" id="obr-ostalo" placeholder="0.00" min="0" step="0.5" oninput="calcObracunLive()"></div>
+    </div>
+
+    <!-- Verificirano -->
+    <div style="margin-bottom:12px">
+      <label class="chk-lbl" id="lbl-vrf" style="display:inline-flex;width:auto;gap:9px">
+        <input type="checkbox" id="obr-vrf" onchange="syncChkStyle('lbl-vrf','obr-vrf')">
+        <span>✅ Verificirano / isporučeno</span></label>
+    </div>
+
+    <!-- Kalkulacija -->
+    <div class="calc-box" id="obrCalcBox">
+      <div class="calc-sec">Honorar</div>
+      <div id="obrCalcRows"></div>
+      <div class="calc-sec">Porezni obračun</div>
+      <div id="obrTaxRows"></div>
+    </div>
+
+    <div class="ma">
+      <button class="btn bo" onclick="closeObracun()">Odustani</button>
+      <button class="btn bp" onclick="doSaveObracun()">💾 Spremi obračun</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: NALOG -->
 <div class="mbg" id="nModal" onclick="if(event.target===this)closeNalog()">
   <div class="modal">
     <div class="mt" id="nMT">Novi nalog</div>
     <div class="msub" id="nSub">Datum snimanja postavlja fotograf.</div>
-
-    <div class="ib" id="nInfo">
-      ℹ️ Admin dodaje nalog — fotograf prima zadatak i postavlja datum i status.
-    </div>
-
-    <!-- Fotograf select (uvijek vidljiv) -->
-    <div class="fr">
-      <div><label>Dodijeli fotografu</label>
-        <select id="n-foto"></select>
-      </div>
-    </div>
-
-    <!-- Admin polja -->
+    <div class="ib" id="nInfo">ℹ️ Admin dodaje nalog — fotograf prima zadatak i postavlja datum i status.</div>
+    <div class="fr"><div><label>Dodijeli fotografu</label><select id="n-foto"></select></div></div>
     <div class="fr c2">
-      <div><label>Šifra objekta</label>
-        <input type="text" id="n-sifra" placeholder="npr. HR-12345" autocomplete="off"></div>
-      <div><label>Broj ugovora</label>
-        <input type="text" id="n-ug" placeholder="Ugovor 2026/…" autocomplete="off"></div>
+      <div><label>Šifra objekta</label><input type="text" id="n-sifra" placeholder="npr. HR-12345" autocomplete="off"></div>
+      <div><label>Broj ugovora</label><input type="text" id="n-ug" placeholder="Ugovor 2026/…" autocomplete="off"></div>
     </div>
     <div class="fr c2">
-      <div><label>Ime vlasnika</label>
-        <input type="text" id="n-ime1" placeholder="Ime" autocomplete="off"></div>
-      <div><label>Prezime vlasnika</label>
-        <input type="text" id="n-ime2" placeholder="Prezime" autocomplete="off"></div>
+      <div><label>Ime vlasnika</label><input type="text" id="n-ime1" placeholder="Ime" autocomplete="off"></div>
+      <div><label>Prezime vlasnika</label><input type="text" id="n-ime2" placeholder="Prezime" autocomplete="off"></div>
     </div>
-    <div class="fr">
-      <div><label>Telefon vlasnika</label>
-        <input type="tel" id="n-tel" placeholder="+385…"></div>
-    </div>
-    <div class="fr">
-      <div><label>Adresa objekta</label>
-        <input type="text" id="n-adr" placeholder="Ulica br., Pula" autocomplete="off"></div>
-    </div>
+    <div class="fr"><div><label>Telefon vlasnika</label><input type="tel" id="n-tel" placeholder="+385…"></div></div>
+    <div class="fr"><div><label>Adresa objekta</label><input type="text" id="n-adr" placeholder="Ulica br., Pula" autocomplete="off"></div></div>
     <div class="fr c2">
-      <div><label>GPS lat</label>
-        <input type="text" id="n-lat" placeholder="44.8666…"></div>
-      <div><label>GPS lng</label>
-        <input type="text" id="n-lng" placeholder="13.8496…"></div>
+      <div><label>GPS lat</label><input type="text" id="n-lat" placeholder="44.8666…"></div>
+      <div><label>GPS lng</label><input type="text" id="n-lng" placeholder="13.8496…"></div>
     </div>
-    <div class="fr">
-      <div><label>Komentar / Napomena</label>
-        <textarea id="n-note" placeholder="Posebne upute, pristup, ključevi…"></textarea></div>
-    </div>
-
+    <div class="fr"><div><label>Komentar / Napomena</label>
+      <textarea id="n-note" placeholder="Posebne upute, pristup, ključevi…"></textarea></div></div>
     <div class="ma">
       <button class="btn bo" onclick="closeNalog()">Odustani</button>
       <button class="btn bp" onclick="saveNalog()">💾 Spremi nalog</button>
@@ -357,592 +602,1051 @@ textarea{resize:vertical;min-height:58px;font-size:.82rem;line-height:1.5}
 <div class="cbg" id="confBg">
   <div class="cbox">
     <div class="cmsg" id="confMsg"></div>
-    <div class="cbtn">
-      <button class="btn bo" id="confNo">Odustani</button>
-      <button class="btn bp" id="confYes">Potvrdi</button>
-    </div>
+    <div class="cbtn"><button class="btn bo" id="confNo">Odustani</button><button class="btn bp" id="confYes">Potvrdi</button></div>
   </div>
 </div>
-
 <div class="toast" id="toast"></div>
 
 <script>
 'use strict';
-
 const SB_URL = 'https://rvdlsbtwcillsrsnmzze.supabase.co';
 const SB_KEY = 'sb_publishable_d1AkA5OcQfED9HBdFqAKtA_84Ey54sl';
 
-// ── ADMIN PRISTUP ──
-// Provjera se vrši na serveru (Supabase tablica "admins").
-// UUID nije pohranjen u kodu — dodaj/makni admina direktno u Supabaseu.
+// ── KONSTANTE ──
+const KALK_CFG_KEY  = 'an_kalk_cfg';
+const OBRACUNI_KEY  = 'an_obracuni';
+const FOTO_TAX_KEY  = 'an_foto_tax';
+const KALK_DEFAULT  = { cp:0, dp:0, kr:0, kt:0, akv:0, ot:0 };
+const TAX_DEFAULT   = { iz:30, mio:10, zo:7.5, pd:22, prirez:0, grad:'Pula', status:'samostalni' };
+const HR_MONTHS = ['Siječanj','Veljača','Ožujak','Travanj','Svibanj','Lipanj',
+                   'Srpanj','Kolovoz','Rujan','Listopad','Studeni','Prosinac'];
+
+// Porezne stope za HR gradove/općine — niža stopa, na snazi od 01.01.2026.
+// Izvor: Porezna uprava RH, NN odluke objavljene do 15.12.2025.
+// NAPOMENA: Prirez je UKINUT od 01.01.2024. — JLS od tada direktno propisuju
+// jedinstvenu stopu poreza na dohodak (bez prireza kao zasebne stavke).
+// Polje 'prirez' zadržano je samo kao informativni prikaz (uvijek 0).
+const GRADOVI = [
+  // Istra
+  {nm:'Pula',pd:22,prirez:0,iz:30},          // NN 2025 — niža stopa 22%, viša 32%
+  {nm:'Medulin',pd:20,prirez:0,iz:30},        // općina, nije donijela odluku → default 20%
+  {nm:'Rovinj',pd:20,prirez:0,iz:30},         // nije donijela novu odluku → 20%
+  {nm:'Poreč',pd:20,prirez:0,iz:30},
+  {nm:'Umag',pd:20,prirez:0,iz:30},
+  {nm:'Novigrad (Ist.)',pd:20,prirez:0,iz:30},
+  // Kvarner
+  {nm:'Rijeka',pd:20,prirez:0,iz:30},         // NN 2025 — snižena s 22 na 20%
+  {nm:'Kastav',pd:20,prirez:0,iz:30},
+  {nm:'Opatija',pd:20,prirez:0,iz:30},
+  // Zagreb i okolica
+  {nm:'Zagreb',pd:20,prirez:0,iz:30},         // prirez ukinut 01.01.2024., stopa 20%
+  // Dalmacija
+  {nm:'Split',pd:22,prirez:0,iz:30},          // veliki grad / sjedište županije
+  {nm:'Zadar',pd:20,prirez:0,iz:30},
+  {nm:'Šibenik',pd:20,prirez:0,iz:30},
+  {nm:'Dubrovnik',pd:20,prirez:0,iz:30},
+  // Slavonija
+  {nm:'Osijek',pd:20,prirez:0,iz:30},
+  {nm:'Slavonski Brod',pd:20,prirez:0,iz:30},
+  {nm:'Bjelovar',pd:20,prirez:0,iz:30},
+  // Sjever
+  {nm:'Varaždin',pd:20,prirez:0,iz:30},
+  {nm:'Čakovec',pd:20,prirez:0,iz:30},
+  {nm:'Karlovac',pd:20,prirez:0,iz:30},
+  {nm:'Ostalo — unesi ručno',pd:20,prirez:0,iz:30},
+];
 
 // ── STATE ──
-let jwt     = localStorage.getItem('an_jwt')   || null;
-let myUid   = localStorage.getItem('an_uid')   || null;
-let myEmail = localStorage.getItem('an_email') || null;
-
-let allRows  = [];
-let selUid   = null;
-let planFilt = 'ceka';
-let editPId  = null; // plan item id being edited (null = novi)
+let jwt     = localStorage.getItem('an_jwt')  || null;
+let myUid   = localStorage.getItem('an_uid')  || null;
+let myEmail = localStorage.getItem('an_email')|| null;
+let allRows  = [], selUid = null, planFilt = 'ceka', editPId = null;
+let rpView   = 'nalozi', obrNalogId = null, obrFotoUid = null;
+let izScope  = 'sel', izMonth = 'all'; // 'all' or 'YYYY-MM'
 
 // ── HELPERS ──
 const g   = id => document.getElementById(id);
 const v   = id => (g(id)||{}).value || '';
 const esc = s  => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-const pj  = s  => { try { return JSON.parse(s); } catch { return null; } };
-const genId = () => String(Date.now()) + String(Math.floor(Math.random() * 1000));
+const pj  = s  => { try{return JSON.parse(s)}catch{return null} };
+const genId = () => String(Date.now())+String(Math.floor(Math.random()*1000));
+const m2  = n  => ((+n)||0).toFixed(2).replace('.',',')+' €';
+const p2  = n  => ((+n)||0).toFixed(2)+'%';
+const fmtDS = s => { if(!s)return'—'; const p=s.split('-'); return p.length===3?p[2]+'.'+p[1]+'.'+p[0]:s; };
+const fmtMonth = ym => {
+  if(!ym||ym==='0000-00')return'(bez datuma)';
+  const[y,m]=ym.split('-');
+  return (HR_MONTHS[parseInt(m)-1]||m)+' '+y;
+};
+const today = () => { const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
 
-function toast(msg, err=false) {
-  const t = g('toast');
-  t.textContent = msg;
-  t.className = 'toast on' + (err ? ' err' : '');
-  clearTimeout(t._t);
-  t._t = setTimeout(() => t.classList.remove('on'), 3200);
+function syncChkStyle(lblId,chkId){const el=g(lblId);if(el)el.classList.toggle('checked-on',g(chkId)?.checked||false)}
+
+function toast(msg,err=false){
+  const t=g('toast');t.textContent=msg;
+  t.className='toast on'+(err?' err':'');
+  clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('on'),2800);
 }
-
-function confirm2(msg, cb) {
-  g('confMsg').textContent = msg;
-  g('confBg').classList.add('on');
-  g('confYes').onclick = () => { g('confBg').classList.remove('on'); cb(); };
-  g('confNo').onclick  = () =>   g('confBg').classList.remove('on');
+function confirm2(msg,cb){
+  g('confMsg').textContent=msg;g('confBg').classList.add('on');
+  g('confYes').onclick=()=>{g('confBg').classList.remove('on');cb()};
+  g('confNo').onclick=()=>g('confBg').classList.remove('on');
 }
-
-function sdot(s) { g('sdot').className = 'sdot' + (s ? ' ' + s : ''); }
-
-function fmtD(s) {
-  if(!s) return null;
-  const d = new Date(s + 'T00:00:00');
-  if(isNaN(d)) return s;
-  return d.toLocaleDateString('hr-HR', { weekday:'short', day:'numeric', month:'long', year:'numeric' });
+function sdot(s){g('sdot').className='sdot'+(s?' '+s:'')}
+function fmtD(s){
+  if(!s)return null;const d=new Date(s+'T00:00:00');if(isNaN(d))return s;
+  return d.toLocaleDateString('hr-HR',{weekday:'short',day:'numeric',month:'long',year:'numeric'});
 }
-
 
 // ── TEMA ──
-function toggleTheme() {
-  const isLight = document.body.classList.toggle('light');
-  localStorage.setItem('an_theme', isLight ? 'l' : 'd');
-  g('themeKnob').textContent = isLight ? '☀️' : '🌙';
+function toggleTheme(){const l=document.body.classList.toggle('light');localStorage.setItem('an_theme',l?'l':'d');g('themeKnob').textContent=l?'☀️':'🌙'}
+function applyTheme(){const t=localStorage.getItem('an_theme'),l=t==='l';document.body.classList.toggle('light',l);const k=g('themeKnob');if(k)k.textContent=l?'☀️':'🌙'}
+
+// ── SETTINGS DRAWER ──
+function toggleDrawer(){g('sdrawer').classList.contains('on')?closeDrawer():openDrawer()}
+function openDrawer(){
+  loadCfgToDrawer();
+  populateTaxFotoSel();
+  populateGradSel();
+  loadTaxToDrawer();
+  g('sdbg').classList.add('on');
+  g('sdrawer').classList.add('on');
 }
-function applyTheme() {
-  const t = localStorage.getItem('an_theme');
-  const isLight = t === 'l';
-  document.body.classList.toggle('light', isLight);
-  const k = g('themeKnob');
-  if(k) k.textContent = isLight ? '☀️' : '🌙';
+function closeDrawer(){g('sdbg').classList.remove('on');g('sdrawer').classList.remove('on')}
+
+function populateGradSel(){
+  const sel=g('tax-grad');if(!sel)return;
+  sel.innerHTML=GRADOVI.map(gr=>`<option value="${esc(gr.nm)}">${esc(gr.nm)}</option>`).join('');
+}
+function onTaxGradChange(){
+  const nm=v('tax-grad');const gr=GRADOVI.find(x=>x.nm===nm);
+  if(gr&&gr.pd>0){g('tax-pd').value=gr.pd;g('tax-iz').value=gr.iz}
+  if(gr){g('tax-prirez').value=gr.prirez||0}
+}
+function onTaxStatusChange(){
+  const st=v('tax-status');
+  const mioEl=g('tax-mio'),zoEl=g('tax-zo');
+  if(st==='zaposlen'){mioEl.value=0;zoEl.value=0}
+  else if(st==='umirovljenik'){mioEl.value=TAX_DEFAULT.mio;zoEl.value=0}
+  else{mioEl.value=TAX_DEFAULT.mio;zoEl.value=TAX_DEFAULT.zo}
+}
+function populateTaxFotoSel(){
+  const sel=g('tax-foto-sel');if(!sel)return;
+  const cur=sel.value;
+  sel.innerHTML=allRows.map(r=>{
+    const ime=getAutorIme(r.sadrzaj)||'(bez imena)';
+    return`<option value="${r.user_id}"${r.user_id===cur?' selected':''}>${esc(ime)}</option>`;
+  }).join('');
+  if(!sel.value&&allRows.length)sel.value=allRows[0].user_id;
+}
+function loadTaxToDrawer(){
+  const uid=v('tax-foto-sel');if(!uid)return;
+  const c=getFotoTaxCfg(uid);
+  g('tax-iz').value=c.iz;g('tax-mio').value=c.mio;
+  g('tax-zo').value=c.zo;g('tax-pd').value=c.pd;
+  g('tax-prirez').value=c.prirez||0;
+  g('tax-status').value=c.status||'samostalni';
+  g('tax-oib').value=c.oib||'';
+  const sel=g('tax-grad');
+  if(sel&&c.grad){sel.value=c.grad;if(!sel.value)sel.value=GRADOVI[0].nm}
+}
+function saveTaxForFoto(){
+  const uid=v('tax-foto-sel');if(!uid){toast('Odaberi fotografa',true);return}
+  const cfg={
+    iz:parseFloat(v('tax-iz'))||TAX_DEFAULT.iz,
+    mio:parseFloat(v('tax-mio'))||0,
+    zo:parseFloat(v('tax-zo'))||0,
+    pd:parseFloat(v('tax-pd'))||0,
+    prirez:parseFloat(v('tax-prirez'))||0,
+    grad:v('tax-grad')||'Pula',
+    status:v('tax-status')||'samostalni',
+    oib:v('tax-oib').trim()||'',
+  };
+  const all=getAllFotoTax();all[uid]=cfg;
+  try{localStorage.setItem(FOTO_TAX_KEY,JSON.stringify(all))}
+  catch(e){toast('Greška pohrane: '+e.message,true);return}
+  toast('Porezne postavke spremljene ✓');
+  calcObracunLive();
+}
+
+// ── CONFIG FUNCTIONS ──
+function kalkCfg(){
+  try{return Object.assign({},KALK_DEFAULT,JSON.parse(localStorage.getItem(KALK_CFG_KEY)||'{}'))}
+  catch{return{...KALK_DEFAULT}}
+}
+function saveCfgToStorage(){
+  const cfg={
+    cp:parseFloat(v('cfg-cp'))||0, akv:parseFloat(v('cfg-akv'))||0,
+    dp:parseFloat(v('cfg-dp'))||0, kr:parseFloat(v('cfg-kr'))||0,
+    kt:parseFloat(v('cfg-kt'))||0, ot:parseFloat(v('cfg-ot'))||0,
+  };
+  try{localStorage.setItem(KALK_CFG_KEY,JSON.stringify(cfg))}
+  catch(e){toast('Greška pohrane: '+e.message,true);return}
+  toast('Naknade spremljene ✓');calcObracunLive();
+}
+function loadCfgToDrawer(){
+  const c=kalkCfg();
+  [['cfg-cp','cp'],['cfg-akv','akv'],['cfg-dp','dp'],['cfg-kr','kr'],['cfg-kt','kt'],['cfg-ot','ot']]
+    .forEach(([id,k])=>{const el=g(id);if(el)el.value=c[k]});
+}
+function getAllFotoTax(){try{return JSON.parse(localStorage.getItem(FOTO_TAX_KEY)||'{}')}catch{return{}}}
+function getFotoTaxCfg(uid){return Object.assign({},TAX_DEFAULT,getAllFotoTax()[uid]||{})}
+
+// ── OBRAČUNI STORAGE ──
+function getAllObracuni(){try{return JSON.parse(localStorage.getItem(OBRACUNI_KEY)||'{}')}catch{return{}}}
+function saveObracunData(id,data){
+  const all=getAllObracuni();all[String(id)]=data;
+  try{localStorage.setItem(OBRACUNI_KEY,JSON.stringify(all))}
+  catch(e){toast('Greška pohrane: '+e.message,true);throw e}
+}
+function getObracun(id){return getAllObracuni()[String(id)]||null}
+
+function getAllObracuniData(filterUid){
+  const obrs=getAllObracuni(),results=[];
+  allRows.forEach(row=>{
+    if(filterUid&&row.user_id!==filterUid)return;
+    const fotoIme=getAutorIme(row.sadrzaj)||'(bez imena)';
+    const plan=getPlan(row.sadrzaj);
+    plan.forEach(nalog=>{
+      const id=String(nalog.id);
+      if(obrs[id]&&(nalog.stat==='obavljeno'||nalog.stat==='otkazano'))
+        results.push({nalog,obr:obrs[id],fotoIme,uid:row.user_id});
+    });
+  });
+  results.sort((a,b)=>{
+    const da=a.nalog.dt||'0000-00-00',db=b.nalog.dt||'0000-00-00';return db.localeCompare(da);
+  });
+  return results;
+}
+function groupByMonth(data){
+  const months={};
+  data.forEach(d=>{
+    const ym=d.nalog.dt?d.nalog.dt.substring(0,7):'0000-00';
+    if(!months[ym])months[ym]={items:[],totalBruto:0,totalNeto:0,totalB2:0};
+    months[ym].items.push(d);
+    months[ym].totalBruto+=(d.obr.bruto||0);
+    months[ym].totalNeto+=(d.obr.neto||0);
+    months[ym].totalB2+=(d.obr.b2||0);
+  });
+  return months;
+}
+
+// ── POREZNA KALKULACIJA — ADRIATIC.HR MODEL ──
+// Reverse-engineered iz Adriaticovog Excel obrasca (Knjiga1.xlsx).
+// Formula: T = foto + (put + ostalo) / (0.93 - 0.63 × pd)
+//          Neto = T × (0.93 - 0.63 × pd)
+//          BrutoIsplata2 = T × 1.0525
+// pd = stopa poreza na dohodak (decimalno, npr. 0.21)
+// Parametri iz/mio/zo/prirez zadržani u objektu radi kompatibilnosti,
+// ali ne utječu na izračun — Adriatic koristi vlastiti model.
+function computeTax(bruto, taxCfg, bKmRaw, bOstaloRaw){
+  const pd    = (taxCfg.pd || 0) / 100;  // pretvori u decimalu
+  const foto  = bruto - (bKmRaw || 0) - (bOstaloRaw || 0);
+  const put   = (bKmRaw || 0) + (bOstaloRaw || 0);
+
+  const faktor = parseFloat((0.93 - 0.63 * pd).toFixed(10));
+
+  // Bruto Isplata (T) — "gross-up" putnih troškova
+  const brutoIsplata = parseFloat((foto + put / faktor).toFixed(10));
+
+  // Bruto Isplata2 — uvećano za 5.25% (Adriaticov trošak)
+  const b2 = parseFloat((Math.round(brutoIsplata * 1.0525 * 100) / 100).toFixed(2));
+
+  // Neto isplata autoru
+  const neto = parseFloat((Math.round(brutoIsplata * faktor * 1000) / 1000).toFixed(2));
+
+  // Porez (informativno — razlika bruto i neto)
+  const porI = parseFloat((brutoIsplata - neto).toFixed(2));
+
+  // Zadržavamo kompatibilnost s postojećim poljima (prikazom i exportom)
+  const iz = taxCfg.iz || 0;
+  const mio = taxCfg.mio || 0;
+  const zo = taxCfg.zo || 0;
+  const prirez = taxCfg.prirez || 0;
+  const iz2 = 0; const osnD = bruto; const mioI = 0; const zoI = 0;
+  const osnP = bruto; const porBazaI = porI; const prirezI = 0;
+
+  return {iz, mio, zo, pd: taxCfg.pd || 0, prirez,
+          iz2, osnD, mioI, zoI, osnP, porI, porBazaI, prirezI,
+          neto, b2, brutoIsplata, faktor};
+}
+
+// ── BACKUP ──
+function backupAll(){
+  const data={v:2,ts:Date.now(),app:'adriatic-nalozi',
+    kalk_cfg:localStorage.getItem(KALK_CFG_KEY)||'{}',
+    obracuni:localStorage.getItem(OBRACUNI_KEY)||'{}',
+    foto_tax:localStorage.getItem(FOTO_TAX_KEY)||'{}',
+  };
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  const d=new Date();
+  a.download=`adriatic_backup_${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}.json`;
+  a.click();URL.revokeObjectURL(a.href);toast('Backup preuzet ✓');
+}
+function importAll(e){
+  const file=e.target.files[0];if(!file)return;
+  const r=new FileReader();
+  r.onload=ev=>{
+    try{
+      const d=JSON.parse(ev.target.result);
+      if(!d.app||!d.app.includes('adriatic')){toast('Neispravan format backupa',true);return}
+      if(d.kalk_cfg)localStorage.setItem(KALK_CFG_KEY,d.kalk_cfg);
+      if(d.obracuni)localStorage.setItem(OBRACUNI_KEY,d.obracuni);
+      if(d.foto_tax)localStorage.setItem(FOTO_TAX_KEY,d.foto_tax);
+      toast('Backup uvežen ✓');loadCfgToDrawer();renderCurrentView();
+    }catch(err){toast('Greška pri uvozu: '+err.message,true)}
+  };
+  r.readAsText(file);e.target.value='';
 }
 
 // ── AUTH ──
-function clearAuth() {
-  jwt = myUid = myEmail = null;
-  ['an_jwt','an_uid','an_email'].forEach(k => localStorage.removeItem(k));
-}
-function showLogin() {
-  g('loginScreen').style.display = 'flex';
-  g('app').style.display = 'none';
-}
+function clearAuth(){jwt=myUid=myEmail=null;['an_jwt','an_uid','an_email'].forEach(k=>localStorage.removeItem(k))}
+function showLogin(){g('loginScreen').style.display='flex';g('app').style.display='none'}
 
-async function doLogin() {
-  const email = v('lEmail').trim(), pass = v('lPass');
-  const btn = g('lBtn'), err = g('lErr');
-  err.style.display = 'none';
-  if(!email || !pass) { err.textContent = 'Unesi e-mail i lozinku.'; err.style.display = 'block'; return; }
-  btn.disabled = true; btn.textContent = 'Prijava…';
-  try {
-    const res  = await fetch(`${SB_URL}/auth/v1/token?grant_type=password`, {
-      method:'POST', headers:{'apikey':SB_KEY,'Content-Type':'application/json'},
-      body: JSON.stringify({email, password:pass})
+async function doLogin(){
+  const email=v('lEmail').trim(),pass=v('lPass');
+  const btn=g('lBtn'),err=g('lErr');err.style.display='none';
+  if(!email||!pass){err.textContent='Unesi e-mail i lozinku.';err.style.display='block';return}
+  btn.disabled=true;btn.textContent='Prijava…';
+  try{
+    const res=await fetch(`${SB_URL}/auth/v1/token?grant_type=password`,{
+      method:'POST',headers:{'apikey':SB_KEY,'Content-Type':'application/json'},
+      body:JSON.stringify({email,password:pass})
     });
-    const data = await res.json();
-    if(!res.ok || !data.access_token) {
-      err.textContent = data.error_description || data.msg || 'Pogrešan e-mail ili lozinka.';
-      err.style.display = 'block'; return;
-    }
-    jwt     = data.access_token;
-    myUid   = data.user?.id;
-    myEmail = data.user?.email || email;
-    // Provjeri admin status na serveru (tablica "admins") — UUID nije u kodu
-    const adminCheck = await fetch(
-      `${SB_URL}/rest/v1/admins?user_id=eq.${data.user.id}&select=user_id`,
-      { headers: { 'apikey': SB_KEY, 'Authorization': `Bearer ${data.access_token}` } }
-    );
-    const adminRows = adminCheck.ok ? await adminCheck.json() : [];
-    if(!adminRows.length) {
-      err.textContent = '⛔ Pristup odbijen — nije admin račun.';
-      err.style.display = 'block';
-      jwt = myUid = myEmail = null;
-      return;
-    }
-    localStorage.setItem('an_jwt', jwt);
-    localStorage.setItem('an_uid', myUid);
-    localStorage.setItem('an_email', myEmail);
+    const data=await res.json();
+    if(!res.ok||!data.access_token){err.textContent=data.error_description||'Pogrešan e-mail ili lozinka.';err.style.display='block';return}
+    jwt=data.access_token;myUid=data.user?.id;myEmail=data.user?.email||email;
+    const ac=await fetch(`${SB_URL}/rest/v1/admins?user_id=eq.${data.user.id}&select=user_id`,
+      {headers:{'apikey':SB_KEY,'Authorization':`Bearer ${data.access_token}`}});
+    const ar=ac.ok?await ac.json():[];
+    if(!ar.length){err.textContent='⛔ Pristup odbijen — nije admin račun.';err.style.display='block';jwt=myUid=myEmail=null;return}
+    localStorage.setItem('an_jwt',jwt);localStorage.setItem('an_uid',myUid);localStorage.setItem('an_email',myEmail);
     startApp();
-  } catch(e) {
-    err.textContent = 'Greška veze: ' + e.message; err.style.display = 'block';
-  } finally {
-    btn.disabled = false; btn.textContent = 'Prijava →';
-  }
+  }catch(e){err.textContent='Greška veze: '+e.message;err.style.display='block'}
+  finally{btn.disabled=false;btn.textContent='Prijava →'}
 }
+function doLogout(){confirm2('Odjavi se?',()=>{stopRealtime();clearAuth();allRows=[];selUid=null;showLogin()})}
 
-function doLogout() {
-  confirm2('Odjavi se?', () => { stopRealtime(); clearAuth(); allRows = []; selUid = null; showLogin(); });
-}
-
-document.addEventListener('keydown', e => {
-  if(e.key === 'Enter' && g('loginScreen').style.display !== 'none') doLogin();
-  if(e.key === 'Escape') {
-    if(g('nModal').classList.contains('on')) closeNalog();
-    g('confBg').classList.remove('on');
+document.addEventListener('keydown',e=>{
+  if(e.key==='Enter'&&g('loginScreen').style.display!=='none')doLogin();
+  if(e.key==='Escape'){
+    if(g('nModal').classList.contains('on'))closeNalog();
+    if(g('obrModal').classList.contains('on'))closeObracun();
+    g('confBg').classList.remove('on');closeDrawer();
   }
 });
 
 // ── SUPABASE ──
-function sbH(ex={}) {
-  return { 'apikey':SB_KEY, 'Authorization':`Bearer ${jwt}`, 'Content-Type':'application/json', ...ex };
+function sbH(ex={}){return{'apikey':SB_KEY,'Authorization':`Bearer ${jwt}`,'Content-Type':'application/json',...ex}}
+async function sbGet(path){
+  const res=await fetch(`${SB_URL}/rest/v1/${path}`,{headers:sbH()});
+  if(res.status===401||res.status===403){clearAuth();showLogin();throw new Error('auth')}
+  if(!res.ok)throw new Error(`HTTP ${res.status}`);return res.json();
 }
-
-async function sbGet(path) {
-  const res = await fetch(`${SB_URL}/rest/v1/${path}`, {headers:sbH()});
-  if(res.status === 401 || res.status === 403) { clearAuth(); showLogin(); throw new Error('auth'); }
-  if(!res.ok) throw new Error(`HTTP ${res.status}`);
-  return res.json();
+async function sbFetchFresh(uid){
+  const rows=await sbGet(`podaci?user_id=eq.${uid}&select=id,user_id,sadrzaj`);
+  if(!rows||!rows.length)throw new Error(`Nema retka za user_id=${uid}`);return rows[0];
 }
-
-// Dohvati svježi red za fotografa (uvijek svježe — ne keš)
-async function sbFetchFresh(targetUid) {
-  const rows = await sbGet(`podaci?user_id=eq.${targetUid}&select=id,user_id,sadrzaj`);
-  if(!rows || !rows.length) throw new Error(`Nema retka za user_id=${targetUid}`);
-  return rows[0];
-}
-
-// Siguran upis: svježi read → patch samo a_plan → server vrati rezultat
-// Admin polja koja smije mijenjati: sifra, ug, ime1, ime2, tel, adr, lat, lng, note
-// Fotograf polja koja admin NE DIRA: stat, dt (uvijek preuzimamo sa servera)
-async function sbPatchPlan(targetUid, newPlan) {
-  // 1. Svježi read — uvijek sa servera, ne iz keša
-  const freshRow = await sbFetchFresh(targetUid);
-  const freshSadrzaj = freshRow.sadrzaj || {};
-
-  // 2. Zamijeni samo a_plan, sve ostalo (autor, cfg, itd.) ostaje netaknuto
-  const merged = { ...freshSadrzaj, a_plan: JSON.stringify(newPlan) };
-
-  // 3. Write — return=minimal jer return=representation zahtijeva SELECT
-  //    permisiju koja može biti odvojena od UPDATE permisije u RLS-u
-  const res = await fetch(`${SB_URL}/rest/v1/podaci?user_id=eq.${targetUid}`, {
-    method: 'PATCH',
-    headers: sbH({ 'Prefer': 'return=minimal' }),
-    body: JSON.stringify({ sadrzaj: merged })
+async function sbPatchPlan(uid,newPlan){
+  const fr=await sbFetchFresh(uid);
+  const merged={...fr.sadrzaj,a_plan:JSON.stringify(newPlan)};
+  const res=await fetch(`${SB_URL}/rest/v1/podaci?user_id=eq.${uid}`,{
+    method:'PATCH',headers:sbH({'Prefer':'return=minimal'}),body:JSON.stringify({sadrzaj:merged})
   });
-  if(res.status === 401 || res.status === 403) {
-    clearAuth(); showLogin();
-    throw new Error(`Auth greška (${res.status}).`);
-  }
-  if(!res.ok) { const t = await res.text(); throw new Error(`HTTP ${res.status}: ${t}`); }
-  // HTTP 204 = uspjeh
-
-  // 4. Ažuriraj lokalni keš direktno — bez dodatnog GET-a
-  const localRow = allRows.find(r => r.user_id === targetUid);
-  if(localRow) localRow.sadrzaj = merged;
+  if(res.status===401||res.status===403){clearAuth();showLogin();throw new Error(`Auth greška.`)}
+  if(!res.ok){const t=await res.text();throw new Error(`HTTP ${res.status}: ${t}`)}
+  const lr=allRows.find(r=>r.user_id===uid);if(lr)lr.sadrzaj=merged;
 }
 
 // ── DATA ──
-async function loadAll() {
+async function loadAll(){
   sdot('busy');
-  try {
-    const rows = await sbGet('podaci?select=id,user_id,sadrzaj&order=created_at.asc');
-    const ADMIN_UIDS = ['d884494d-6be2-4a70-8314-b7d4f60cd381'];
-    allRows = rows.filter(r => r.sadrzaj && (r.sadrzaj.v || r.sadrzaj.autor || r.sadrzaj.a_plan) && !ADMIN_UIDS.includes(r.user_id));
-    sdot('ok'); return true;
-  } catch(e) {
-    if(e.message !== 'auth') { sdot('err'); toast('Greška učitavanja: ' + e.message, true); }
-    allRows = []; return false;
+  try{
+    const rows=await sbGet('podaci?select=id,user_id,sadrzaj&order=created_at.asc');
+    const ADMIN_UIDS=['d884494d-6be2-4a70-8314-b7d4f60cd381'];
+    allRows=rows.filter(r=>r.sadrzaj&&(r.sadrzaj.v||r.sadrzaj.autor||r.sadrzaj.a_plan)&&!ADMIN_UIDS.includes(r.user_id));
+    sdot('ok');return true;
+  }catch(e){
+    if(e.message!=='auth'){sdot('err');toast('Greška učitavanja: '+e.message,true)}
+    allRows=[];return false;
   }
 }
-
-function getAutorIme(sadrzaj) { const a = pj(sadrzaj?.autor); return a?.ime || null; }
-function getPlan(sadrzaj) {
-  if(!sadrzaj?.a_plan) return [];
-  const p = pj(sadrzaj.a_plan);
-  return Array.isArray(p) ? p : [];
-}
-function getRowByUid(uid) { return allRows.find(r => r.user_id === uid) || null; }
-
-function getBadge(plan) {
-  if(!plan.length) return { cls:'bm', lbl:'0' };
-  const ceka = plan.filter(p => !p.stat || p.stat === 'ceka').length;
-  const obav = plan.filter(p => p.stat === 'obavljeno').length;
-  if(ceka > 0) return { cls:'bc', lbl: String(ceka) };
-  if(obav === plan.length) return { cls:'bg', lbl:'✓ ' + obav };
-  return { cls:'bm', lbl: String(plan.length) };
+function getAutorIme(s){const a=pj(s?.autor);return a?.ime||null}
+function getPlan(s){if(!s?.a_plan)return[];const p=pj(s.a_plan);return Array.isArray(p)?p:[]}
+function getRowByUid(uid){return allRows.find(r=>r.user_id===uid)||null}
+function getBadge(plan){
+  if(!plan.length)return{cls:'bm',lbl:'0'};
+  const ceka=plan.filter(p=>!p.stat||p.stat==='ceka').length;
+  const obav=plan.filter(p=>p.stat==='obavljeno').length;
+  if(ceka>0)return{cls:'bc',lbl:String(ceka)};
+  if(obav===plan.length)return{cls:'bg',lbl:'✓ '+obav};
+  return{cls:'bm',lbl:String(plan.length)};
 }
 
 // ── RENDER FOTOGRAFI ──
-function renderFotografi() {
-  const list = g('fList');
-  const q = v('fSrch').toLowerCase().trim();
-  let rows = allRows;
-  if(q) rows = rows.filter(r => (getAutorIme(r.sadrzaj)||'').toLowerCase().includes(q) || r.user_id.includes(q));
-  g('lpCnt').textContent = rows.length ? rows.length + ' foto.' : '';
-  if(!rows.length) {
-    list.innerHTML = q
-      ? `<div class="empty"><div class="ei">🔍</div>Nema rezultata.</div>`
-      : `<div class="empty"><div class="ei">📷</div>Nema vidljivih fotografa.<br><span style="font-size:.7rem;color:var(--mut2)">Provjeri Supabase RLS SELECT politiku.</span></div>`;
-    return;
-  }
-  list.innerHTML = rows.map(r => {
-    const ime  = getAutorIme(r.sadrzaj) || '(bez imena)';
-    const plan = getPlan(r.sadrzaj);
-    const bdg  = getBadge(plan);
-    const isSelf = r.user_id === myUid;
-    const act    = r.user_id === selUid;
-    return `<div class="fi${act ? ' active' : ''}" onclick="selFotograf('${r.user_id}')">
-      <div class="fi-name">${esc(ime)}${isSelf ? ' <span style="font-size:.6rem;color:var(--acc)">▶ ti</span>' : ''}</div>
+function renderFotografi(){
+  const list=g('fList'),q=v('fSrch').toLowerCase().trim();
+  let rows=allRows;
+  if(q)rows=rows.filter(r=>(getAutorIme(r.sadrzaj)||'').toLowerCase().includes(q)||r.user_id.includes(q));
+  g('lpCnt').textContent=rows.length?rows.length+' foto.':'';
+  if(!rows.length){list.innerHTML=`<div class="empty"><div class="ei">📷</div>Nema fotografa.</div>`;return}
+  list.innerHTML=rows.map(r=>{
+    const ime=getAutorIme(r.sadrzaj)||'(bez imena)',plan=getPlan(r.sadrzaj),bdg=getBadge(plan);
+    const act=r.user_id===selUid,isSelf=r.user_id===myUid;
+    return`<div class="fi${act?' active':''}" onclick="selFotograf('${r.user_id}')">
+      <div class="fi-name">${esc(ime)}${isSelf?' <span style="font-size:.6rem;color:var(--acc)">▶</span>':''}</div>
       <div class="fi-sub">${plan.length} nalog${plan.length===1?'':'a'}</div>
-      <div class="fi-bdg ${bdg.cls}">${bdg.lbl}</div>
-    </div>`;
+      <div class="fi-bdg ${bdg.cls}">${bdg.lbl}</div></div>`;
   }).join('');
 }
 
 // ── SELECT FOTOGRAF ──
-function selFotograf(uid) {
-  selUid = uid;
-  const row = getRowByUid(uid);
-  g('rpNm').textContent = getAutorIme(row?.sadrzaj) || '(bez imena)';
-  g('btnNovi').disabled = false;
-  renderFotografi();
-  renderNalozi();
+function selFotograf(uid){
+  selUid=uid;
+  const row=getRowByUid(uid);
+  g('rpNm').textContent=getAutorIme(row?.sadrzaj)||'(bez imena)';
+  g('btnNovi').disabled=false;
+  renderFotografi();renderCurrentView();
+}
+
+// ── VIEW SWITCHING ──
+function setRpView(vw){
+  rpView=vw;
+  document.querySelectorAll('.vt').forEach(b=>b.classList.remove('on'));
+  g('vt-'+vw)?.classList.add('on');
+  g('rpFr').style.display=vw==='nalozi'?'':'none';
+  renderCurrentView();
+}
+function renderCurrentView(){
+  switch(rpView){
+    case 'nalozi':renderNalozi();break;
+    case 'obracun':renderObracunList();break;
+    case 'izvjestaji':renderIzvjestaji();break;
+  }
+}
+
+// ── FILTER BAR ──
+function setFilt(f,btn){
+  planFilt=f;
+  document.querySelectorAll('.rp-fr .ft').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');renderNalozi();
 }
 
 // ── RENDER NALOZI ──
-function setFilt(f, btn) {
-  planFilt = f;
-  document.querySelectorAll('.rp-fr .ft').forEach(b => b.classList.remove('on'));
-  btn.classList.add('on');
-  renderNalozi();
+function renderNalozi(){
+  const list=g('nList');
+  if(!selUid){list.innerHTML=`<div class="empty"><div class="ei">👈</div>Odaberi fotografa.</div>`;g('nCnt').textContent='';return}
+  const row=getRowByUid(selUid);let plan=getPlan(row?.sadrzaj);
+  if(planFilt!=='svi')plan=plan.filter(p=>planFilt==='ceka'?(!p.stat||p.stat==='ceka'):p.stat===planFilt);
+  g('nCnt').textContent=plan.length?plan.length+' prikazano':'';
+  if(!plan.length){
+    const msgs={ceka:'Nema naloga na čekanju.',obavljeno:'Nema obavljenih.',otkazano:'Nema otkazanih.',svi:'Nema naloga.'};
+    list.innerHTML=`<div class="empty"><div class="ei">📋</div>${msgs[planFilt]||'Nema naloga.'}</div>`;return;
+  }
+  plan.sort((a,b)=>(!a.dt&&!b.dt)?0:!a.dt?1:!b.dt?-1:a.dt.localeCompare(b.dt));
+  list.innerHTML=plan.map(p=>renderCard(p)).join('');
 }
 
-function renderNalozi() {
-  const list = g('nList');
-  if(!selUid) {
-    list.innerHTML = `<div class="empty"><div class="ei">👈</div>Odaberi fotografa.</div>`;
-    g('nCnt').textContent = '';
-    return;
-  }
-  const row  = getRowByUid(selUid);
-  let plan   = getPlan(row?.sadrzaj);
-  if(planFilt !== 'svi')
-    plan = plan.filter(p => planFilt === 'ceka' ? (!p.stat || p.stat === 'ceka') : p.stat === planFilt);
-  g('nCnt').textContent = plan.length ? plan.length + ' prikazano' : '';
-  if(!plan.length) {
-    const msgs = { ceka:'Nema naloga na čekanju.', obavljeno:'Nema obavljenih.', otkazano:'Nema otkazanih.', svi:'Nema naloga.' };
-    list.innerHTML = `<div class="empty"><div class="ei">📋</div>${msgs[planFilt]||'Nema naloga.'}</div>`;
-    return;
-  }
-  // Sortiraj: bez datuma na dnu, inače ASC
-  plan.sort((a,b) => (!a.dt && !b.dt) ? 0 : !a.dt ? 1 : !b.dt ? -1 : a.dt.localeCompare(b.dt));
-  list.innerHTML = plan.map(p => renderCard(p)).join('');
-}
-
-function renderCard(p) {
-  const stat  = p.stat || 'ceka';
-  const hasDt = !!p.dt;
-  const cls   = hasDt ? stat : 'nodatum';
-  const statLbl = { ceka:'Na čekanju', obavljeno:'Obavljeno', otkazano:'Otkazano', nodatum:'Čeka datum fotografa' };
-  const ime   = ((p.ime1||'') + ' ' + (p.ime2||'')).trim();
-  const maps  = p.lat && p.lng
-    ? `https://maps.google.com/?q=${p.lat},${p.lng}`
-    : p.adr ? `https://maps.google.com/?q=${encodeURIComponent(p.adr)}` : '';
-  const pid   = String(p.id).replace(/["'<>]/g,'');
-  // Admin može urediti samo svoja polja
-  const isAdminCreated = !p.dt; // novi nalog nema datum — fotograf ga još nije prihvatio
-
-  return `<div class="pc ${cls}">
-    ${hasDt
-      ? `<div class="pc-dt">${fmtD(p.dt)}</div>`
-      : `<div class="pc-dt" style="color:var(--mut);font-style:italic;font-size:.85rem">Datum postavlja fotograf</div>`
-    }
-    <span class="ps ${cls}">${statLbl[cls] || statLbl[stat]}</span>
-
-    ${p.sifra ? `<div class="pr">🔑 <strong style="color:var(--acc);font-family:var(--mono)">#${esc(p.sifra)}</strong></div>` : ''}
-    ${p.ug    ? `<div class="pr">📄 ${esc(p.ug)}</div>` : ''}
-    ${ime     ? `<div class="pr">👤 ${esc(ime)}${p.tel ? ' · <a href="tel:'+esc(p.tel)+'">'+esc(p.tel)+'</a>' : ''}</div>` : ''}
-    ${p.adr   ? `<div class="pr">📍 <a href="${maps}" target="_blank">${esc(p.adr)}</a></div>` : ''}
-    ${p.note  ? `<div class="pnote">📝 ${esc(p.note)}</div>` : ''}
-
+function renderCard(p){
+  const stat=p.stat||'ceka',hasDt=!!p.dt,cls=hasDt?stat:'nodatum';
+  const statLbl={ceka:'Na čekanju',obavljeno:'Obavljeno',otkazano:'Otkazano',nodatum:'Čeka datum fotografa'};
+  const ime=((p.ime1||'')+' '+(p.ime2||'')).trim();
+  const maps=p.lat&&p.lng?`https://maps.google.com/?q=${p.lat},${p.lng}`:p.adr?`https://maps.google.com/?q=${encodeURIComponent(p.adr)}`:'';
+  const pid=String(p.id).replace(/["'<>]/g,'');
+  const hasObr=(stat==='obavljeno'||stat==='otkazano')&&!!getObracun(pid);
+  const obrBtn=(stat==='obavljeno'||stat==='otkazano')?
+    `<button class="btn ${hasObr?'bgrn':'bo'} bsm" onclick="openObracun('${pid}','${selUid}')">${hasObr?'💰 ✓':'💰 Obračun'}</button>`:'';
+  return`<div class="pc ${cls}">
+    ${hasDt?`<div class="pc-dt">${fmtD(p.dt)}</div>`:`<div class="pc-dt" style="color:var(--mut);font-style:italic;font-size:.85rem">Datum postavlja fotograf</div>`}
+    <span class="ps ${cls}">${statLbl[cls]||statLbl[stat]}</span>
+    ${p.sifra?`<div class="pr">🔑 <strong style="color:var(--acc);font-family:var(--mono)">#${esc(p.sifra)}</strong></div>`:''}
+    ${p.ug?`<div class="pr">📄 ${esc(p.ug)}</div>`:''}
+    ${ime?`<div class="pr">👤 ${esc(ime)}${p.tel?' · <a href="tel:'+esc(p.tel)+'">'+esc(p.tel)+'</a>':''}</div>`:''}
+    ${p.adr?`<div class="pr">📍 <a href="${maps}" target="_blank">${esc(p.adr)}</a></div>`:''}
+    ${p.note?`<div class="pnote">📝 ${esc(p.note)}</div>`:''}
     <div class="pac">
-      <!-- Status je read-only za admina -->
-      <span class="stat-ro">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-        Status mijenja fotograf
-      </span>
-      <div style="margin-left:auto">
-        <button class="btn bo bsm" onclick="openNalog('${pid}')" title="Uredi polja naloga">✏️ Uredi</button>
+      <span class="stat-ro"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Status mijenja fotograf</span>
+      <div style="margin-left:auto;display:flex;gap:6px">
+        ${obrBtn}
+        <button class="btn bo bsm" onclick="openNalog('${pid}')">✏️ Uredi</button>
       </div>
     </div>
   </div>`;
 }
 
+// ── OBRAČUN LIST VIEW ──
+function renderObracunList(){
+  const list=g('nList');
+  if(!selUid){list.innerHTML=`<div class="empty"><div class="ei">👈</div>Odaberi fotografa.</div>`;return}
+  const row=getRowByUid(selUid);
+  const plan=getPlan(row?.sadrzaj).filter(p=>p.stat==='obavljeno'||p.stat==='otkazano');
+  if(!plan.length){list.innerHTML=`<div class="empty"><div class="ei">📋</div>Nema obavljenih ili otkazanih naloga.</div>`;return}
+  plan.sort((a,b)=>(!a.dt&&!b.dt)?0:!a.dt?1:!b.dt?-1:b.dt.localeCompare(a.dt));
+  const total=plan.reduce((s,p)=>{const o=getObracun(p.id);return s+(o?.bruto||0)},0);
+  const totalNeto=plan.reduce((s,p)=>{const o=getObracun(p.id);return s+(o?.neto||0)},0);
+  const cnt=plan.filter(p=>!!getObracun(p.id)).length;
+  list.innerHTML=`
+    <div style="display:flex;gap:14px;align-items:center;margin-bottom:10px">
+      <div style="font-size:.72rem;color:var(--mut2)">${cnt}/${plan.length} obračunano</div>
+      <div style="font-size:.82rem;font-weight:700;font-family:var(--mono);color:var(--grn)">${cnt?'Bruto: '+m2(total):''}</div>
+      <div style="font-size:.82rem;font-weight:700;font-family:var(--mono);color:var(--acc)">${cnt?'Neto: '+m2(totalNeto):''}</div>
+    </div>
+    ${plan.map(p=>renderObracunCard(p)).join('')}`;
+}
+
+function renderObracunCard(p){
+  const obr=getObracun(p.id);
+  const ime=((p.ime1||'')+' '+(p.ime2||'')).trim();
+  const pid=String(p.id).replace(/["'<>]/g,'');
+  const title=p.sifra?`#${esc(p.sifra)}${p.adr?' — '+esc(p.adr):''}`:esc(p.adr||ime||'(bez adrese)');
+  if(obr){
+    return`<div class="obr-card">
+      <div class="obr-head">
+        <div style="min-width:0">
+          <div class="obr-title">${title}</div>
+          <div class="obr-sub">${p.dt?fmtDS(p.dt):'—'}${p.ug?' · '+esc(p.ug):''}</div>
+        </div>
+        <button class="btn bo bsm" style="flex-shrink:0" onclick="openObracun('${pid}','${selUid}')">✏️ Uredi</button>
+      </div>
+      <div class="obr-grid">
+        <div class="obr-cell"><div class="obr-cell-lbl">Kategorije</div>
+          <div class="obr-cell-val">${obr.otkaz?'<span style="color:var(--red)">Otkaz</span>':(obr.kat||0)+' kom'}</div></div>
+        <div class="obr-cell"><div class="obr-cell-lbl">Km (1 rel.)</div>
+          <div class="obr-cell-val">${obr.km||0} km</div></div>
+        <div class="obr-cell"><div class="obr-cell-lbl">Bruto honorar</div>
+          <div class="obr-cell-val">${m2(obr.bruto||0)}</div></div>
+        <div class="obr-cell"><div class="obr-cell-lbl">MIO</div>
+          <div class="obr-cell-val" style="color:var(--red)">−${m2(obr.mioI||0)}</div></div>
+        <div class="obr-cell"><div class="obr-cell-lbl">Porez (${obr.pd||0}%)</div>
+          <div class="obr-cell-val" style="color:var(--red)">−${m2(obr.porI||0)}</div></div>
+        <div class="obr-cell"><div class="obr-cell-lbl">ZO (naruč.)</div>
+          <div class="obr-cell-val" style="color:var(--grn)">+${m2(obr.zoI||0)}</div></div>
+      </div>
+      <div class="obr-total"><span class="obr-total-lbl">Bruto + ZO (trošak naruč.)</span><span class="obr-total-val">${m2(obr.b2||0)}</span></div>
+      <div class="obr-neto-row"><span class="obr-neto-lbl">NETO ISPLATA AUTORU</span><span class="obr-neto-val">${m2(obr.neto||0)}</span></div>
+    </div>`;
+  }else{
+    return`<div class="obr-card empty-obr">
+      <div class="obr-head">
+        <div style="min-width:0">
+          <div class="obr-title">${title}</div>
+          <div class="obr-sub">${p.dt?fmtDS(p.dt):'—'}${p.ug?' · '+esc(p.ug):''} · <em style="color:var(--mut)">Nema obračuna</em></div>
+        </div>
+        <button class="btn bp bsm" style="flex-shrink:0" onclick="openObracun('${pid}','${selUid}')">💰 Unesi</button>
+      </div>
+    </div>`;
+  }
+}
+
+// ── IZVJEŠTAJI VIEW ──
+function renderIzvjestaji(){
+  const list=g('nList');
+  const filterUid=izScope==='sel'?selUid:null;
+  if(izScope==='sel'&&!selUid){
+    list.innerHTML=izScopeBar()+`<div class="empty"><div class="ei">👈</div>Odaberi fotografa.</div>`;return;
+  }
+  let data=getAllObracuniData(filterUid);
+  if(!data.length){list.innerHTML=izScopeBar()+`<div class="empty"><div class="ei">📊</div>Nema obračunanih naloga.</div>`;return}
+
+  // Month filter
+  if(izMonth!=='all')data=data.filter(d=>(d.nalog.dt||'0000-00').startsWith(izMonth));
+
+  const totalBruto=data.reduce((s,d)=>s+(d.obr.bruto||0),0);
+  const totalNeto=data.reduce((s,d)=>s+(d.obr.neto||0),0);
+  const totalB2=data.reduce((s,d)=>s+(d.obr.b2||0),0);
+  const totalMio=data.reduce((s,d)=>s+(d.obr.mioI||0),0);
+  const months=groupByMonth(data);
+  const monthKeys=Object.keys(months).sort((a,b)=>b.localeCompare(a));
+
+  // Update print header
+  const fotoNm=izScope==='sel'?(getAutorIme(getRowByUid(selUid)?.sadrzaj)||''):'Svi fotografi';
+  const fotoOib=izScope==='sel'?(getFotoTaxCfg(selUid)?.oib||''):'';
+  const period=izMonth==='all'?'Sve razdoblje':fmtMonth(izMonth);
+  const el=g('phFoto');if(el)el.textContent=fotoNm;
+  const oibEl=g('phOib');if(oibEl)oibEl.textContent=fotoOib?'OIB: '+fotoOib:'';
+  const pe=g('phPeriod');if(pe)pe.textContent='Razdoblje: '+period;
+  const de=g('phDatum');if(de)de.textContent='Ispis: '+fmtDS(today());
+  const sube=g('phSub');if(sube)sube.textContent=izScope==='all'?'Svi fotografi — '+period:'Fotograf: '+fotoNm+' · '+period;
+  const pfn=g('pfFotoIme');if(pfn)pfn.textContent=fotoNm;
+  const pfo=g('pfOib');if(pfo)pfo.textContent=fotoOib;
+  const pfd=g('pfDatum');if(pfd)pfd.textContent=fmtDS(today());
+  const pfm=g('pfMjesto');if(pfm)pfm.textContent=izScope==='sel'?(getFotoTaxCfg(selUid)?.grad||''):'';
+
+  let html=izScopeBar();
+  html+=`<div class="iz-stats">
+    <div class="iz-stat"><div class="iz-stat-val">${data.length}</div><div class="iz-stat-lbl">Ukupno naloga</div></div>
+    <div class="iz-stat"><div class="iz-stat-val">${m2(totalBruto)}</div><div class="iz-stat-lbl">Bruto honorar</div></div>
+    <div class="iz-stat"><div class="iz-stat-val">${m2(totalMio)}</div><div class="iz-stat-lbl">MIO (odbitak)</div></div>
+    <div class="iz-stat"><div class="iz-stat-val">${m2(totalNeto)}</div><div class="iz-stat-lbl">Neto isplata</div></div>
+  </div>`;
+
+  const showFoto=izScope==='all';
+
+  monthKeys.forEach(ym=>{
+    const{items,totalBruto:mBruto,totalNeto:mNeto,totalB2:mB2}=months[ym];
+    html+=`<div class="iz-month-hd">${fmtMonth(ym)} — ${items.length} naloga · Bruto: ${m2(mBruto)} · Neto: ${m2(mNeto)}</div>`;
+    html+=`<table class="iz-tbl">
+    <thead>
+      <tr>
+        ${showFoto?'<th class="grp" rowspan="2">Fotograf</th>':''}
+        <th class="grp" colspan="5">Obrada</th>
+        <th class="grp">Akv.</th>
+        <th class="grp" colspan="2">Putni</th>
+        <th class="grp" colspan="6">Bruto honorar</th>
+        <th class="grp" colspan="4">Porezni obračun</th>
+        <th class="grp" colspan="2">Isplata</th>
+        <th class="grp" colspan="2">Status</th>
+      </tr>
+      <tr>
+        <th>Ugovor</th><th>Kat.</th><th>Šifra</th><th>Kontakt.</th><th>Snimanje</th>
+        <th>Dogovoreno</th>
+        <th class="num">Km</th><th class="num">Ostalo</th>
+        <th class="num">Foto.</th><th class="num">Dron</th><th class="num">Otkaz</th><th class="num">Put</th><th class="num">Ostalo</th><th class="num tot">Ukupno</th>
+        <th class="num">Iz% (−)</th><th class="num">MIO (−)</th><th class="num">ZO (+)</th><th class="num">Porez (−)</th>
+        <th class="num">+ZO</th><th class="num neto-val">NETO</th>
+        <th>Verif.</th><th>Otkaz.</th>
+      </tr>
+    </thead>
+    <tbody>`;
+
+    items.forEach(({nalog,obr,fotoIme})=>{
+      const label=nalog.sifra?'#'+esc(nalog.sifra):esc(nalog.adr||'—');
+      const isOtkaz=obr.otkaz;
+      html+=`<tr class="${isOtkaz?'otkaz-row':''}">
+        ${showFoto?`<td>${esc(fotoIme)}</td>`:''}
+        <td style="font-size:.72rem;color:var(--mut2)">${esc(nalog.ug||'—')}</td>
+        <td>${obr.otkaz?'—':(obr.kat||0)}</td>
+        <td><span style="font-family:var(--mono);font-size:.75rem;color:var(--acc)">${nalog.sifra?'#'+esc(nalog.sifra):'—'}</span></td>
+        <td>${obr.dtKontakt?fmtDS(obr.dtKontakt):'—'}</td>
+        <td>${fmtDS(nalog.dt)}</td>
+        <td>${esc(obr.dogovoreno||'Adriatic.hr')}</td>
+        <td class="num">${obr.km||0}</td>
+        <td class="num">${m2(obr.ostalo||0)}</td>
+        <td class="num">${m2(obr.bKat||0)}</td>
+        <td class="num">${m2(obr.bDron||0)}</td>
+        <td class="num">${m2(obr.bOt||0)}</td>
+        <td class="num">${m2(obr.bKm||0)}</td>
+        <td class="num">${m2(obr.ostalo||0)}</td>
+        <td class="num tot">${m2(obr.bruto||0)}</td>
+        <td class="num">−${m2(obr.iz2||0)}</td>
+        <td class="num">−${m2(obr.mioI||0)}</td>
+        <td class="num">+${m2(obr.zoI||0)}</td>
+        <td class="num">−${m2(obr.porI||0)}</td>
+        <td class="num tot">${m2(obr.b2||0)}</td>
+        <td class="num neto-val">${m2(obr.neto||0)}</td>
+        <td style="text-align:center">${obr.verificirano?'✓ DA':'—'}</td>
+        <td style="text-align:center;color:${isOtkaz?'var(--red)':'inherit'}">${isOtkaz?'❌ DA':'—'}</td>
+      </tr>`;
+    });
+
+    const totalMioM=items.reduce((s,d)=>s+(d.obr.mioI||0),0);
+    const totalZoM=items.reduce((s,d)=>s+(d.obr.zoI||0),0);
+    const totalPorM=items.reduce((s,d)=>s+(d.obr.porI||0),0);
+    const totalIz2M=items.reduce((s,d)=>s+(d.obr.iz2||0),0);
+    const totalBKatM=items.reduce((s,d)=>s+(d.obr.bKat||0),0);
+    const totalBKmM=items.reduce((s,d)=>s+(d.obr.bKm||0),0);
+    html+=`<tr class="totrow">
+      ${showFoto?'<td></td>':''}
+      <td colspan="8" style="font-size:.65rem;color:var(--mut2);font-weight:700">Ukupno ${fmtMonth(ym)}</td>
+      <td class="num">${m2(totalBKatM)}</td><td></td><td></td>
+      <td class="num">${m2(totalBKmM)}</td><td></td>
+      <td class="num tot">${m2(mBruto)}</td>
+      <td class="num">−${m2(totalIz2M)}</td>
+      <td class="num">−${m2(totalMioM)}</td>
+      <td class="num">+${m2(totalZoM)}</td>
+      <td class="num">−${m2(totalPorM)}</td>
+      <td class="num tot">${m2(mB2)}</td>
+      <td class="num neto-val">${m2(mNeto)}</td>
+      <td colspan="2"></td>
+    </tr>`;
+    html+=`</tbody></table>`;
+    html+=`<div style="text-align:right;margin-top:6px;font-size:.82rem;font-weight:800;color:#111">
+      Ukupno za isplatu: ${m2(mNeto)} €
+    </div>`;
+  });
+
+  list.innerHTML=html;
+}
+
+function izScopeBar(){
+  const months=Object.keys(groupByMonth(getAllObracuniData(izScope==='sel'?selUid:null))).sort((a,b)=>b.localeCompare(a));
+  const mOpts=`<option value="all">Svi mjeseci</option>`
+    +months.map(ym=>`<option value="${ym}"${izMonth===ym?' selected':''}>${fmtMonth(ym)}</option>`).join('');
+  return`<div class="iz-topbar">
+    <button class="ft ${izScope==='sel'?'on':''}" onclick="setIzScope('sel')">👤 Fotograf</button>
+    <button class="ft ${izScope==='all'?'on':''}" onclick="setIzScope('all')">👥 Svi</button>
+    <select style="font-size:.72rem;padding:4px 8px;border-radius:20px;border:1px solid var(--brd);background:var(--surf2);color:var(--txt);cursor:pointer" onchange="setIzMonth(this.value)">${mOpts}</select>
+    <div style="margin-left:auto;display:flex;gap:6px">
+      <button class="btn bo bsm" onclick="exportExcel()">⬇ Excel</button>
+      <button class="btn bo bsm" onclick="printWithTitle()">🖨 Print/PDF</button>
+      <button class="btn bo bsm" onclick="batchPrint()" title="Ispiši sve fotografe zasebno">🖨 Batch</button>
+    </div>
+  </div>`;
+}
+function setIzScope(s){izScope=s;renderIzvjestaji()}
+function setIzMonth(m){izMonth=m;renderIzvjestaji()}
+
+// ── EXCEL EXPORT ──
+function printWithTitle(){
+  const ime=(izScope==='sel'?(getAutorIme(getRowByUid(selUid)?.sadrzaj)||'Fotograf'):'Svi-fotografi')
+    .replace(/\s+/g,'-');
+  const period=izMonth==='all'?'svi-mjeseci':izMonth;
+  const newTitle=`Obracun_${ime}_${period}`;
+  const titleEl=document.querySelector('title');
+  const prev=titleEl.textContent;
+  titleEl.textContent=newTitle;
+  toast(`PDF: ${newTitle}`);
+  window.onafterprint=()=>{ titleEl.textContent=prev; window.onafterprint=null; };
+  window.print();
+}
+
+function batchPrint(){
+  // Skupi sve naloge za odabrani mjesec
+  let data=getAllObracuniData(null);
+  if(izMonth!=='all')data=data.filter(d=>(d.nalog.dt||'0000-00').startsWith(izMonth));
+  // Samo fotografe koji imaju stvarnih isplata (neto > 0)
+  const uids=[...new Set(data.filter(d=>(d.obr.neto||0)>0).map(d=>d.uid))];
+  if(!uids.length){toast('Nema fotografa s isplatama za odabrani period',true);return;}
+  const periodLbl=izMonth==='all'?'sve mjesece':fmtMonth(izMonth);
+  if(!confirm(`Batch print: ${uids.length} fotograf${uids.length===1?'':'a'} za ${periodLbl}.\n\nZa svakog će se otvoriti zasebni print dialog.\nNastavi?`))return;
+  // Pohrani originalno stanje
+  const origScope=izScope,origUid=selUid;
+  let idx=0;
+  const titleEl=document.querySelector('title');
+  const origTitle=titleEl.textContent;
+  function printNext(){
+    if(idx>=uids.length){
+      // Vrati originalno stanje
+      izScope=origScope; selUid=origUid;
+      titleEl.textContent=origTitle;
+      renderIzvjestaji();
+      toast(`✓ Batch print završen — ${uids.length} dokument${uids.length===1?'':'a'}`);
+      return;
+    }
+    const uid=uids[idx++];
+    izScope='sel'; selUid=uid;
+    renderIzvjestaji();
+    const ime=(getAutorIme(getRowByUid(uid)?.sadrzaj)||'Fotograf').replace(/\s+/g,'-');
+    const period=izMonth==='all'?'svi-mjeseci':izMonth;
+    titleEl.textContent=`Obracun_${ime}_${period}`;
+    toast(`🖨 ${idx}/${uids.length}: ${ime}`);
+    window.onafterprint=()=>{ window.onafterprint=null; printNext(); };
+    window.print();
+  }
+  printNext();
+}
+function exportExcel(){
+  if(typeof XLSX==='undefined'){toast('XLSX nije učitan',true);return}
+  const filterUid=izScope==='sel'?selUid:null;
+  if(izScope==='sel'&&!selUid){toast('Odaberi fotografa',true);return}
+  let data=getAllObracuniData(filterUid);
+  if(izMonth!=='all')data=data.filter(d=>(d.nalog.dt||'0000-00').startsWith(izMonth));
+  if(!data.length){toast('Nema obračunanih naloga',true);return}
+
+  const rows=data.map(({nalog,obr,fotoIme})=>({
+    'Datum snimanja':      nalog.dt||'',
+    'Fotograf':            fotoIme,
+    'Šifra':               nalog.sifra||'',
+    'Ugovor':              nalog.ug||'',
+    'Adresa':              nalog.adr||'',
+    'Datum kontaktiran':   obr.dtKontakt||'',
+    'Datum isporuke':      obr.dtIsporuka||'',
+    'Dogovoreno':          obr.dogovoreno||'Adriatic.hr',
+    'Kat. (kom)':          obr.otkaz?0:(obr.kat||0),
+    'Km (1 relacija)':     obr.km||0,
+    'Dron':                obr.otkaz?'Ne':(obr.dron?'Da':'Ne'),
+    'Akvizicija':          obr.otkaz?'Ne':(obr.akv?'Da':'Ne'),
+    'Honorar foto (€)':    parseFloat((obr.bKat||0).toFixed(2)),
+    'Honorar dron (€)':    parseFloat((obr.bDron||0).toFixed(2)),
+    'Trošk. otkaza (€)':   parseFloat((obr.bOt||0).toFixed(2)),
+    'Putni trošak (€)':    parseFloat((obr.bKm||0).toFixed(2)),
+    'Ostali trošk. (€)':   parseFloat((obr.ostalo||0).toFixed(2)),
+    'BRUTO honorar (€)':   parseFloat((obr.bruto||0).toFixed(2)),
+    'Paušalni izdaci (€)': parseFloat((obr.iz2||0).toFixed(2)),
+    'MIO (€)':             parseFloat((obr.mioI||0).toFixed(2)),
+    'ZO - naruč. (€)':     parseFloat((obr.zoI||0).toFixed(2)),
+    'Porez (€)':           parseFloat((obr.porI||0).toFixed(2)),
+    'Porezna stopa (%)':   obr.pd||0,
+    'Bruto + ZO (€)':      parseFloat((obr.b2||0).toFixed(2)),
+    'NETO isplata (€)':    parseFloat((obr.neto||0).toFixed(2)),
+    'Verificirano':        obr.verificirano?'Da':'Ne',
+    'Otkaz':               obr.otkaz?'Da':'Ne',
+  }));
+  const ws1=XLSX.utils.json_to_sheet(rows);
+  ws1['!cols']=[{wch:13},{wch:18},{wch:12},{wch:16},{wch:24},{wch:13},{wch:13},{wch:14},
+    {wch:8},{wch:10},{wch:6},{wch:10},{wch:14},{wch:12},{wch:14},{wch:14},{wch:14},
+    {wch:16},{wch:16},{wch:10},{wch:14},{wch:10},{wch:13},{wch:14},{wch:14},{wch:10},{wch:7}];
+
+  const months=groupByMonth(data);
+  const mRows=Object.keys(months).sort((a,b)=>a.localeCompare(b)).map(ym=>({
+    'Mjesec':fmtMonth(ym),
+    'Broj naloga':months[ym].items.length,
+    'Bruto honorar (€)':parseFloat(months[ym].totalBruto.toFixed(2)),
+    'MIO (€)':parseFloat(months[ym].items.reduce((s,d)=>s+(d.obr.mioI||0),0).toFixed(2)),
+    'ZO (€)':parseFloat(months[ym].items.reduce((s,d)=>s+(d.obr.zoI||0),0).toFixed(2)),
+    'Porez (€)':parseFloat(months[ym].items.reduce((s,d)=>s+(d.obr.porI||0),0).toFixed(2)),
+    'Bruto+ZO (€)':parseFloat(months[ym].totalB2.toFixed(2)),
+    'Neto isplata (€)':parseFloat(months[ym].totalNeto.toFixed(2)),
+  }));
+  const ws2=XLSX.utils.json_to_sheet(mRows);
+  ws2['!cols']=[{wch:18},{wch:12},{wch:16},{wch:12},{wch:12},{wch:12},{wch:14},{wch:16}];
+
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws1,'Po poslovima');
+  XLSX.utils.book_append_sheet(wb,ws2,'Po mjesecima');
+  const d=new Date();
+  XLSX.writeFile(wb,`adriatic_obracun_${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}.xlsx`);
+  toast('Excel exportan ✓');
+}
+
 // ── MODAL: NALOG ──
-function popFotoSel(selFor) {
-  const sel = g('n-foto');
-  sel.innerHTML = allRows.map(r => {
-    const ime = getAutorIme(r.sadrzaj) || '(bez imena) ' + r.user_id.slice(0,8);
-    return `<option value="${r.user_id}"${r.user_id === selFor ? ' selected' : ''}>${esc(ime)}</option>`;
+function popFotoSel(selFor){
+  const sel=g('n-foto');
+  sel.innerHTML=allRows.map(r=>{
+    const ime=getAutorIme(r.sadrzaj)||'(bez imena) '+r.user_id.slice(0,8);
+    return`<option value="${r.user_id}"${r.user_id===selFor?' selected':''}>${esc(ime)}</option>`;
   }).join('');
 }
-
-function openNalog(planId) {
-  editPId = planId || null;
-  const isEdit = !!planId;
-  g('nMT').textContent  = isEdit ? 'Uredi podatke naloga' : 'Novi nalog';
-  g('nSub').textContent = isEdit
-    ? 'Možeš mijenjati: šifra, ugovor, kontakt, adresa, GPS, komentar. Datum i status mijenja fotograf.'
-    : 'Datum snimanja i status postavlja fotograf nakon primitka naloga.';
-  g('nInfo').style.display = isEdit ? 'none' : 'block';
-
-  if(isEdit) {
-    const row  = getRowByUid(selUid);
-    const item = getPlan(row?.sadrzaj).find(p => String(p.id) === String(planId));
-    if(!item) { toast('Nalog nije pronađen — osvježi.', true); return; }
-    g('n-sifra').value = item.sifra || '';
-    g('n-ug').value    = item.ug    || '';
-    g('n-ime1').value  = item.ime1  || '';
-    g('n-ime2').value  = item.ime2  || '';
-    g('n-tel').value   = item.tel   || '';
-    g('n-adr').value   = item.adr   || '';
-    g('n-lat').value   = item.lat   || '';
-    g('n-lng').value   = item.lng   || '';
-    g('n-note').value  = item.note  || '';
-    popFotoSel(selUid);
-  } else {
-    ['n-sifra','n-ug','n-ime1','n-ime2','n-tel','n-adr','n-lat','n-lng','n-note'].forEach(id => g(id).value = '');
+function openNalog(planId){
+  editPId=planId||null;const isEdit=!!planId;
+  g('nMT').textContent=isEdit?'Uredi podatke naloga':'Novi nalog';
+  g('nSub').textContent=isEdit?'Možeš mijenjati: šifra, ugovor, kontakt, adresa, GPS, komentar.':'Datum snimanja i status postavlja fotograf.';
+  g('nInfo').style.display=isEdit?'none':'block';
+  if(isEdit){
+    const row=getRowByUid(selUid);
+    const item=getPlan(row?.sadrzaj).find(p=>String(p.id)===String(planId));
+    if(!item){toast('Nalog nije pronađen',true);return}
+    g('n-sifra').value=item.sifra||'';g('n-ug').value=item.ug||'';
+    g('n-ime1').value=item.ime1||'';g('n-ime2').value=item.ime2||'';
+    g('n-tel').value=item.tel||'';g('n-adr').value=item.adr||'';
+    g('n-lat').value=item.lat||'';g('n-lng').value=item.lng||'';
+    g('n-note').value=item.note||'';popFotoSel(selUid);
+  }else{
+    ['n-sifra','n-ug','n-ime1','n-ime2','n-tel','n-adr','n-lat','n-lng','n-note'].forEach(id=>g(id).value='');
     popFotoSel(selUid);
   }
-  g('nModal').classList.add('on');
-  setTimeout(() => g('n-sifra').focus(), 60);
+  g('nModal').classList.add('on');setTimeout(()=>g('n-sifra').focus(),60);
 }
+function closeNalog(){g('nModal').classList.remove('on');editPId=null}
 
-function closeNalog() {
-  g('nModal').classList.remove('on');
-  editPId = null;
-}
-
-async function saveNalog() {
-  const targetUid = v('n-foto');
-  if(!targetUid) { toast('Odaberi fotografa!', true); return; }
-
+async function saveNalog(){
+  const targetUid=v('n-foto');if(!targetUid){toast('Odaberi fotografa!',true);return}
   sdot('busy');
-  try {
-    // Uvijek svježi read — ne koristimo keširani plan
-    const freshRow = await sbFetchFresh(targetUid);
-    const plan = getPlan(freshRow.sadrzaj);
-
-    if(editPId) {
-      // EDIT: pronađi item na serveru, ažuriraj SAMO admin polja
-      const idx = plan.findIndex(p => String(p.id) === String(editPId));
-      if(idx < 0) { toast('Nalog nije pronađen na serveru — osvježi.', true); sdot('err'); return; }
-      // Zadrži fotograf polja netaknutima (stat, dt) — patchaj samo admin polja
-      plan[idx] = {
-        ...plan[idx],          // sve postojeće (uključujući stat, dt koje fotograf kontrolira)
-        sifra: v('n-sifra').trim(),
-        ug:    v('n-ug').trim(),
-        ime1:  v('n-ime1').trim(),
-        ime2:  v('n-ime2').trim(),
-        tel:   v('n-tel').trim(),
-        adr:   v('n-adr').trim(),
-        lat:   v('n-lat').trim(),
-        lng:   v('n-lng').trim(),
-        note:  v('n-note').trim(),
-        _adminTs: Date.now(),  // timestamp admin izmjene — FotoKalk ga poštuje pri merge-u
-      };
-    } else {
-      // NOVI NALOG: stat=ceka, bez datuma (fotograf postavlja)
-      const newItem = {
-        id:    genId(),
-        stat:  'ceka',
-        dt:    '',          // fotograf postavlja
-        sifra: v('n-sifra').trim(),
-        ug:    v('n-ug').trim(),
-        ime1:  v('n-ime1').trim(),
-        ime2:  v('n-ime2').trim(),
-        tel:   v('n-tel').trim(),
-        adr:   v('n-adr').trim(),
-        lat:   v('n-lat').trim(),
-        lng:   v('n-lng').trim(),
-        note:  v('n-note').trim(),
-        _adminTs: Date.now(),  // timestamp admin kreacije
-      };
-      plan.unshift(newItem);
+  try{
+    const freshRow=await sbFetchFresh(targetUid);const plan=getPlan(freshRow.sadrzaj);
+    if(editPId){
+      const idx=plan.findIndex(p=>String(p.id)===String(editPId));
+      if(idx<0){toast('Nalog nije pronađen na serveru',true);sdot('err');return}
+      plan[idx]={...plan[idx],sifra:v('n-sifra').trim(),ug:v('n-ug').trim(),
+        ime1:v('n-ime1').trim(),ime2:v('n-ime2').trim(),tel:v('n-tel').trim(),
+        adr:v('n-adr').trim(),lat:v('n-lat').trim(),lng:v('n-lng').trim(),note:v('n-note').trim(),_adminTs:Date.now()};
+    }else{
+      plan.unshift({id:genId(),stat:'ceka',dt:'',sifra:v('n-sifra').trim(),ug:v('n-ug').trim(),
+        ime1:v('n-ime1').trim(),ime2:v('n-ime2').trim(),tel:v('n-tel').trim(),
+        adr:v('n-adr').trim(),lat:v('n-lat').trim(),lng:v('n-lng').trim(),note:v('n-note').trim(),_adminTs:Date.now()});
     }
-
-    await sbPatchPlan(targetUid, plan);
-
-    // Ako je fotograf promijenjen kod edita — premjesti nalog
-    if(editPId && targetUid !== selUid) {
-      const freshOld = await sbFetchFresh(selUid);
-      const oldPlan  = getPlan(freshOld.sadrzaj).filter(p => String(p.id) !== String(editPId));
-      await sbPatchPlan(selUid, oldPlan);
-      selUid = targetUid;
-      g('rpNm').textContent = getAutorIme(getRowByUid(targetUid)?.sadrzaj) || '—';
+    await sbPatchPlan(targetUid,plan);
+    if(editPId&&targetUid!==selUid){
+      const freshOld=await sbFetchFresh(selUid);
+      const oldPlan=getPlan(freshOld.sadrzaj).filter(p=>String(p.id)!==String(editPId));
+      await sbPatchPlan(selUid,oldPlan);selUid=targetUid;
+      g('rpNm').textContent=getAutorIme(getRowByUid(targetUid)?.sadrzaj)||'—';
     }
+    closeNalog();renderCurrentView();renderFotografi();sdot('ok');
+    toast(editPId?'Nalog ažuriran ✓':'Nalog dodan ✓');
+  }catch(e){sdot('err');toast('Greška: '+e.message,true)}
+}
 
-    closeNalog();
-    renderNalozi();
-    renderFotografi();
-    sdot('ok');
-    toast(editPId ? 'Nalog ažuriran ✓' : 'Nalog dodan ✓');
+// ── MODAL: OBRAČUN ──
+function openObracun(planId,uid){
+  const targetUid=uid||selUid;
+  const row=getRowByUid(targetUid);
+  if(!row){toast('Fotograf nije pronađen',true);return}
+  const item=getPlan(row.sadrzaj).find(p=>String(p.id)===String(planId));
+  if(!item){toast('Nalog nije pronađen',true);return}
+  obrNalogId=String(planId);obrFotoUid=targetUid;
+  const fotoIme=getAutorIme(row.sadrzaj)||'—';
+  const ime=((item.ime1||'')+' '+(item.ime2||'')).trim();
+  const subtitle=[item.sifra?'#'+item.sifra:null,item.adr||null,ime||null].filter(Boolean).join(' — ');
+  g('obrSub').textContent=subtitle||'(bez podataka)';
+  const taxCfg=getFotoTaxCfg(targetUid);
+  g('obrInfo').innerHTML=[
+    item.dt?`📅 ${fmtD(item.dt)}`:'📅 —',
+    `👤 ${esc(fotoIme)}`,
+    item.ug?`📄 ${esc(item.ug)}`:null,
+    `📊 ${taxCfg.grad} · ${taxCfg.status}`,
+  ].filter(Boolean).join(' &nbsp;·&nbsp; ');
 
-  } catch(e) {
-    sdot('err');
-    toast('Greška: ' + e.message, true);
+  const ex=getObracun(planId);
+  g('obr-kat').value=ex?.kat!=null?ex.kat:'';
+  g('obr-km').value=ex?.km!=null?ex.km:'';
+  g('obr-ostalo').value=ex?.ostalo!=null?ex.ostalo:'';
+  g('obr-dtKontakt').value=ex?.dtKontakt||'';
+  g('obr-dtIsporuka').value=ex?.dtIsporuka||'';
+  g('obr-dogovoreno').value=ex?.dogovoreno||'Adriatic.hr';
+  g('obr-dron').checked=ex?.dron||false;
+  g('obr-akv').checked=ex?.akv||false;
+  g('obr-otkaz').checked=ex?.otkaz||false;
+  g('obr-vrf').checked=ex?.verificirano||false;
+  syncChkStyle('lbl-dron','obr-dron');syncChkStyle('lbl-akv','obr-akv');
+  syncChkStyle('lbl-otkaz','obr-otkaz');syncChkStyle('lbl-vrf','obr-vrf');
+  toggleOtkazFields();calcObracunLive();
+  g('obrModal').classList.add('on');setTimeout(()=>g('obr-kat').focus(),60);
+}
+function closeObracun(){g('obrModal').classList.remove('on');obrNalogId=null;obrFotoUid=null}
+
+function toggleOtkazFields(){
+  const isOtkaz=g('obr-otkaz')?.checked||false;
+  const note=g('obrOtkazNote');if(note)note.style.display=isOtkaz?'block':'none';
+  const disable=(id,lblId)=>{
+    const el=g(id);if(!el)return;
+    el.disabled=isOtkaz;if(isOtkaz){el.checked=false;syncChkStyle(lblId,id)}
+    const lbl=g(lblId);if(lbl)lbl.style.opacity=isOtkaz?'.35':'';
+  };
+  const katEl=g('obr-kat');
+  if(katEl){katEl.disabled=isOtkaz;katEl.parentElement.style.opacity=isOtkaz?'.35':''}
+  disable('obr-dron','lbl-dron');disable('obr-akv','lbl-akv');
+}
+
+function calcObracunLive(){
+  if(!g('obrCalcRows'))return;
+  const cfg=kalkCfg();
+  const taxCfg=getFotoTaxCfg(obrFotoUid||selUid||'');
+  const otkaz=g('obr-otkaz')?.checked||false;
+  const km=parseFloat(v('obr-km'))||0;
+  const ostalo=parseFloat(v('obr-ostalo'))||0;
+  let bKat=0,bDron=0,bAkv=0,bOt=0;
+  const bKm=km>cfg.kt?parseFloat((km*cfg.kr).toFixed(2)):0;
+  if(otkaz){bOt=cfg.ot}
+  else{
+    const kat=parseInt(v('obr-kat'))||0;
+    const dron=g('obr-dron')?.checked||false;
+    const akv=g('obr-akv')?.checked||false;
+    bKat=parseFloat((kat*cfg.cp).toFixed(2));
+    bDron=dron?cfg.dp:0;bAkv=akv?cfg.akv:0;
   }
+  const bruto=parseFloat((bKat+bKm+bDron+bAkv+bOt+ostalo).toFixed(2));
+  const tax=computeTax(bruto,taxCfg,bKm+bOt,ostalo);
+
+  // Honorar rows
+  let hr='';
+  if(otkaz)hr+=cRow('❌ Otkaz po dolasku','',true);
+  else{
+    const kat=parseInt(v('obr-kat'))||0;
+    if(bKat>0)hr+=cRow(`Fotografiranje (${kat} × ${m2(cfg.cp)})`,m2(bKat));
+    if(bDron>0)hr+=cRow('Dron',m2(bDron));
+    if(bAkv>0)hr+=cRow('Akvizicija (paušal)',m2(bAkv));
+  }
+  if(km>0&&km<=cfg.kt&&cfg.kt>0)hr+=`<div class="calc-row" style="color:var(--mut);font-style:italic">ℹ️ ${km} km ≤ prag ${cfg.kt} km — bez naknade</div>`;
+  if(bKm>0)hr+=cRow(`Putni troškovi (${km} km × ${m2(cfg.kr)})`,m2(bKm));
+  if(bOt>0)hr+=cRow('Propuštena dobit',m2(bOt));
+  if(ostalo>0)hr+=cRow('Ostali troškovi',m2(ostalo));
+  if(!hr)hr=`<div class="calc-row" style="font-style:italic;color:var(--mut)">Unesi podatke…</div>`;
+  hr+=`<div class="calc-row total"><span>BRUTO HONORAR</span><span class="mono">${m2(bruto)}</span></div>`;
+  g('obrCalcRows').innerHTML=hr;
+
+  // Tax rows
+  let tr='';
+  tr+=cRow(`Faktor (0.93 − 0.63 × ${taxCfg.pd}%)`,m2(tax.faktor*100).replace(' €','%'));
+  tr+=cRow('Bruto Isplata (T)',m2(tax.brutoIsplata));
+  tr+=cRow('Bruto Isplata2 (×1.0525)',m2(tax.b2));
+  tr+=cRow(`Porez i doprinosi (~${taxCfg.pd}%)`,`− ${m2(tax.porI)}`,'minus');
+  tr+=`<div class="calc-row neto"><span>NETO ISPLATA</span><span class="mono">${m2(tax.neto)}</span></div>`;
+  g('obrTaxRows').innerHTML=tr;
+}
+function cRow(lbl,val,cls=''){
+  return`<div class="calc-row${cls?' '+cls:''}"><span>${lbl}</span><span class="mono">${val}</span></div>`;
+}
+
+function doSaveObracun(){
+  if(!obrNalogId)return;
+  const cfg=kalkCfg();
+  const taxCfg=getFotoTaxCfg(obrFotoUid||selUid||'');
+  const otkaz=g('obr-otkaz')?.checked||false;
+  const km=parseFloat(v('obr-km'))||0;
+  const ostalo=parseFloat(v('obr-ostalo'))||0;
+  let kat=0,dron=false,akv=false,bKat=0,bDron=0,bAkv=0,bOt=0;
+  const bKm=km>cfg.kt?parseFloat((km*cfg.kr).toFixed(2)):0;
+  if(otkaz){bOt=cfg.ot}
+  else{
+    kat=parseInt(v('obr-kat'))||0;dron=g('obr-dron')?.checked||false;akv=g('obr-akv')?.checked||false;
+    bKat=parseFloat((kat*cfg.cp).toFixed(2));bDron=dron?cfg.dp:0;bAkv=akv?cfg.akv:0;
+  }
+  const bruto=parseFloat((bKat+bKm+bDron+bAkv+bOt+ostalo).toFixed(2));
+  const tax=computeTax(bruto,taxCfg,bKm+bOt,ostalo);
+  const data={
+    kat,km,dron,akv,otkaz,ostalo,
+    dtKontakt:v('obr-dtKontakt')||'',
+    dtIsporuka:v('obr-dtIsporuka')||'',
+    dogovoreno:v('obr-dogovoreno')||'Adriatic.hr',
+    verificirano:g('obr-vrf')?.checked||false,
+    bKat,bKm,bDron,bAkv,bOt,bruto,
+    ...tax,
+    fotoUid:obrFotoUid,ts:Date.now()
+  };
+  try{saveObracunData(obrNalogId,data)}catch{return}
+  closeObracun();toast('Obračun spremljen ✓');renderCurrentView();
 }
 
 // ── REALTIME ──
-let _rtWs = null;
-let _rtRetry = null;
-
-function rtSetStatus(state) {
-  const dot = g('rtDot'), lbl = g('rtLbl');
-  if(!dot) return;
-  const map = { conn:['','Spajanje…'], live:['live','LIVE'], err:['err','Greška'], off:['','—'] };
-  const [cls, txt] = map[state] || map.off;
-  dot.className = 'rt-dot' + (cls ? ' ' + cls : '');
-  lbl.textContent = txt;
+let _rtWs=null,_rtRetry=null;
+function rtSetStatus(state){
+  const dot=g('rtDot'),lbl=g('rtLbl');if(!dot)return;
+  const map={conn:['','Spajanje…'],live:['live','LIVE'],err:['err','Greška'],off:['','—']};
+  const[cls,txt]=map[state]||map.off;dot.className='rt-dot'+(cls?' '+cls:'');lbl.textContent=txt;
 }
-
-function startRealtime() {
-  if(_rtWs) { try { _rtWs.close(); } catch(_){} _rtWs = null; }
-  clearTimeout(_rtRetry);
-  rtSetStatus('conn');
-
-  const wsUrl = `wss://${SB_URL.replace('https://','')}/realtime/v1/websocket?apikey=${SB_KEY}&vsn=1.0.0`;
-  const ws = new WebSocket(wsUrl);
-  _rtWs = ws;
-
-  ws.onopen = () => {
-    ws.send(JSON.stringify({
-      topic: 'realtime:public:podaci',
-      event: 'phx_join',
-      payload: {
-        config: {
-          broadcast: { self: false },
-          presence: {},
-          postgres_changes: [{ event: 'UPDATE', schema: 'public', table: 'podaci' }]
-        }
-      },
-      ref: '1'
-    }));
-  };
-
-  ws.onmessage = async (msg) => {
-    let d;
-    try { d = JSON.parse(msg.data); } catch { return; }
-
-    // Potvrda spajanja (phx_reply na join)
-    if(d.event === 'phx_reply' && d.payload && d.payload.status === 'ok') {
-      rtSetStatus('live');
-      return;
-    }
-
-    // Postgres UPDATE event
-    if(d.event === 'postgres_changes') {
-      const uid = d.payload && d.payload.data && d.payload.data.record
-        ? d.payload.data.record.user_id : null;
-      if(!uid) return;
-      const ADMIN_UIDS = ['d884494d-6be2-4a70-8314-b7d4f60cd381'];
-      if(ADMIN_UIDS.includes(uid)) return;
-      try {
-        const fresh = await sbFetchFresh(uid);
-        const row = allRows.find(r => r.user_id === uid);
-        if(row) {
-          row.sadrzaj = fresh.sadrzaj;
-          renderFotografi();
-          renderNalozi();
-          if(uid === selUid) toast('↺ Ažurirano u realnom vremenu');
-        }
-      } catch(e) {
-        console.warn('RT fetch error:', e.message);
-      }
+function startRealtime(){
+  if(_rtWs){try{_rtWs.close()}catch(_){}_rtWs=null}
+  clearTimeout(_rtRetry);rtSetStatus('conn');
+  const wsUrl=`wss://${SB_URL.replace('https://','')}/realtime/v1/websocket?apikey=${SB_KEY}&vsn=1.0.0`;
+  const ws=new WebSocket(wsUrl);_rtWs=ws;
+  ws.onopen=()=>ws.send(JSON.stringify({topic:'realtime:public:podaci',event:'phx_join',
+    payload:{config:{broadcast:{self:false},presence:{},postgres_changes:[{event:'UPDATE',schema:'public',table:'podaci'}]}},ref:'1'}));
+  ws.onmessage=async(msg)=>{
+    let d;try{d=JSON.parse(msg.data)}catch{return}
+    if(d.event==='phx_reply'&&d.payload?.status==='ok'){rtSetStatus('live');return}
+    if(d.event==='postgres_changes'){
+      const uid=d.payload?.data?.record?.user_id;if(!uid)return;
+      const ADMIN_UIDS=['d884494d-6be2-4a70-8314-b7d4f60cd381'];if(ADMIN_UIDS.includes(uid))return;
+      try{
+        const fresh=await sbFetchFresh(uid);const row=allRows.find(r=>r.user_id===uid);
+        if(row){row.sadrzaj=fresh.sadrzaj;renderFotografi();if(uid===selUid){renderCurrentView();toast('↺ Realtime ažuriranje')}}
+      }catch(e){console.warn('RT:',e.message)}
     }
   };
-
-  // Heartbeat svakih 30s (Supabase zahtijeva)
-  const hb = setInterval(() => {
-    if(ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify({ topic: 'phoenix', event: 'heartbeat', payload: {}, ref: null }));
-    } else {
-      clearInterval(hb);
-    }
-  }, 30000);
-
-  ws.onerror = () => rtSetStatus('err');
-
-  ws.onclose = () => {
-    clearInterval(hb);
-    rtSetStatus('err');
-    if(jwt) _rtRetry = setTimeout(startRealtime, 5000);
-  };
+  const hb=setInterval(()=>{
+    if(ws.readyState===WebSocket.OPEN)ws.send(JSON.stringify({topic:'phoenix',event:'heartbeat',payload:{},ref:null}));
+    else clearInterval(hb);
+  },30000);
+  ws.onerror=()=>rtSetStatus('err');
+  ws.onclose=()=>{clearInterval(hb);rtSetStatus('err');if(jwt)_rtRetry=setTimeout(startRealtime,5000)};
 }
+function stopRealtime(){clearTimeout(_rtRetry);if(_rtWs){try{_rtWs.close()}catch(_){}_rtWs=null}rtSetStatus('off')}
 
-function stopRealtime() {
-  clearTimeout(_rtRetry);
-  if(_rtWs) { try { _rtWs.close(); } catch(_){} _rtWs = null; }
-  rtSetStatus('off');
-}
+async function refreshAll(){const ok=await loadAll();if(ok){renderFotografi();renderCurrentView();toast('Osvježeno ✓')}}
 
-// ── REFRESH ──
-async function refreshAll() {
-  const ok = await loadAll();
-  if(ok) { renderFotografi(); renderNalozi(); toast('Osvježeno ✓'); }
-}
-
-// ── INIT ──
-async function startApp() {
-  // Sigurnosna provjera na serveru — je li ovaj user i dalje u tablici "admins"
-  try {
-    const chk = await fetch(
-      `${SB_URL}/rest/v1/admins?user_id=eq.${myUid}&select=user_id`,
-      { headers: { 'apikey': SB_KEY, 'Authorization': `Bearer ${jwt}` } }
-    );
-    const rows = chk.ok ? await chk.json() : [];
-    if(!rows.length) {
-      clearAuth();
-      const err = g('lErr');
-      err.textContent = '⛔ Pristup odbijen — nije admin račun.';
-      err.style.display = 'block';
-      showLogin();
-      return;
-    }
-  } catch(e) {
-    // Greška mreže — pusti dalje, loadAll() će uhvatiti pravi problem
-  }
-  g('loginScreen').style.display = 'none';
-  g('app').style.display = 'block';
-  g('hEmail').textContent = myEmail || '';
-  applyTheme();
-  g('fList').innerHTML = '<div class="loading"><div class="sp"></div>Učitavanje fotografa…</div>';
-  const ok = await loadAll();
-  if(ok) {
-    renderFotografi();
-    renderNalozi();
-    // Auto-selektiraj sebe
-    if(myUid && allRows.find(r => r.user_id === myUid)) selFotograf(myUid);
+async function startApp(){
+  try{
+    const chk=await fetch(`${SB_URL}/rest/v1/admins?user_id=eq.${myUid}&select=user_id`,
+      {headers:{'apikey':SB_KEY,'Authorization':`Bearer ${jwt}`}});
+    const rows=chk.ok?await chk.json():[];
+    if(!rows.length){clearAuth();const e=g('lErr');e.textContent='⛔ Pristup odbijen.';e.style.display='block';showLogin();return}
+  }catch(e){}
+  g('loginScreen').style.display='none';g('app').style.display='block';
+  g('hEmail').textContent=myEmail||'';applyTheme();
+  g('fList').innerHTML='<div class="loading"><div class="sp"></div>Učitavanje fotografa…</div>';
+  const ok=await loadAll();
+  if(ok){renderFotografi();renderCurrentView();
+    if(myUid&&allRows.find(r=>r.user_id===myUid))selFotograf(myUid);
     startRealtime();
   }
 }
 
-(function() {
-  applyTheme();
-  if(jwt && myUid) startApp();
-})();
+(function(){applyTheme();if(jwt&&myUid)startApp()})();
 
-// ═══ SERVICE WORKER ═══
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw-nalozi.js').catch(() => {});
-  });
-}
+if('serviceWorker' in navigator)
+  window.addEventListener('load',()=>navigator.serviceWorker.register('./sw-nalozi.js').catch(()=>{}));
 </script>
 </body>
 </html>
