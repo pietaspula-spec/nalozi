@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Adriatic Nalozi v1.0.0.</title>
+<title>Adriatic Nalozi v2</title>
 <link rel="manifest" href="manifest-nalozi.json">
 <meta name="theme-color" content="#0b0c0e" id="themeColorMeta">
 <meta name="description" content="Upravljanje nalozima — Adriatic.hr">
@@ -753,6 +753,7 @@ async function saveNalog() {
         lat:   v('n-lat').trim(),
         lng:   v('n-lng').trim(),
         note:  v('n-note').trim(),
+        _adminTs: Date.now(),  // timestamp admin izmjene — FotoKalk ga poštuje pri merge-u
       };
     } else {
       // NOVI NALOG: stat=ceka, bez datuma (fotograf postavlja)
@@ -769,6 +770,7 @@ async function saveNalog() {
         lat:   v('n-lat').trim(),
         lng:   v('n-lng').trim(),
         note:  v('n-note').trim(),
+        _adminTs: Date.now(),  // timestamp admin kreacije
       };
       plan.unshift(newItem);
     }
