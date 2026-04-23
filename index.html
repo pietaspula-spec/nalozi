@@ -910,23 +910,23 @@ async function doLogin(){
   if(!email||!pass){err.textContent='Unesi e-mail i lozinku.';err.style.display='block';return}
   btn.disabled=true;btn.textContent='Prijava…';
   try{
-    const res=await fetch(`${SB_URL}/auth/v1/token?grant_type=password`,{
+    const res=await fetchWithTimeout(`${SB_URL}/auth/v1/token?grant_type=password`,{
       method:'POST',headers:{'apikey':SB_KEY,'Content-Type':'application/json'},
       body:JSON.stringify({email,password:pass})
     });
     const data=await res.json();
     if(!res.ok||!data.access_token){err.textContent=data.error_description||'Pogrešan e-mail ili lozinka.';err.style.display='block';return}
     jwt=data.access_token;myUid=data.user?.id;myEmail=data.user?.email||email;
-    const ac=await fetch(`${SB_URL}/rest/v1/admins?user_id=eq.${data.user.id}&select=user_id`,
+    const ac=await fetchWithTimeout(`${SB_URL}/rest/v1/admins?user_id=eq.${data.user.id}&select=user_id`,
       {headers:{'apikey':SB_KEY,'Authorization':`Bearer ${data.access_token}`}});
     const ar=ac.ok?await ac.json():[];
     if(!ar.length){err.textContent='⛔ Pristup odbijen — nije admin račun.';err.style.display='block';jwt=myUid=myEmail=null;return}
     localStorage.setItem('an_jwt',jwt);localStorage.setItem('an_uid',myUid);localStorage.setItem('an_email',myEmail);
     startApp();
-  }catch(e){err.textContent='Greška veze: '+e.message;err.style.display='block'}
+  }catch(e){err.textContent=(e.name==='AbortError'?'Veza nije odgovorila (timeout) — pokušaj ponovo.':'Greška veze: '+e.message);err.style.display='block'}
   finally{btn.disabled=false;btn.textContent='Prijava →'}
 }
-function doLogout(){confirm2('Odjavi se?',()=>{stopRealtime();clearAuth();allRows=[];selUid=null;showLogin()})}
+function doLogout(){confirm2('Odjavi se?',()=>{stopPolling();clearAuth();allRows=[];selUid=null;showLogin()})}
 
 document.addEventListener('keydown',e=>{
   if(e.key==='Enter'&&g('loginScreen').style.display!=='none')doLogin();
@@ -939,8 +939,19 @@ document.addEventListener('keydown',e=>{
 
 // ── SUPABASE ──
 function sbH(ex={}){return{'apikey':SB_KEY,'Authorization':`Bearer ${jwt}`,'Content-Type':'application/json',...ex}}
+// FIX-SYNC-7: fetch s AbortController timeoutom — sprječava vječno visanje
+async function fetchWithTimeout(url, opts={}, timeoutMs=15000){
+  const ctrl = new AbortController();
+  const timer = setTimeout(()=>ctrl.abort(), timeoutMs);
+  try{
+    return await fetch(url, {...opts, signal: ctrl.signal});
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function sbGet(path){
-  const res=await fetch(`${SB_URL}/rest/v1/${path}`,{headers:sbH()});
+  const res=await fetchWithTimeout(`${SB_URL}/rest/v1/${path}`,{headers:sbH()});
   if(res.status===401||res.status===403){clearAuth();showLogin();throw new Error('auth')}
   if(!res.ok)throw new Error(`HTTP ${res.status}`);return res.json();
 }
@@ -949,14 +960,46 @@ async function sbFetchFresh(uid){
   if(!rows||!rows.length)throw new Error(`Nema retka za user_id=${uid}`);return rows[0];
 }
 async function sbPatchPlan(uid,newPlan){
-  const fr=await sbFetchFresh(uid);
-  const merged={...fr.sadrzaj,a_plan:JSON.stringify(newPlan)};
-  const res=await fetch(`${SB_URL}/rest/v1/podaci?user_id=eq.${uid}`,{
-    method:'PATCH',headers:sbH({'Prefer':'return=minimal'}),body:JSON.stringify({sadrzaj:merged})
-  });
-  if(res.status===401||res.status===403){clearAuth();showLogin();throw new Error(`Auth greška.`)}
-  if(!res.ok){const t=await res.text();throw new Error(`HTTP ${res.status}: ${t}`)}
-  const lr=allRows.find(r=>r.user_id===uid);if(lr)lr.sadrzaj=merged;
+  // FIX-SYNC-A: TOCTOU zaštita — fetch → provjera → patch u jednoj atomičnoj sekvenci.
+  // Ako FotoKalk napravi push između našeg fetcha i našeg patcha, sadrzaj koji smo
+  // patchali izgubio bi fotografove podatke. Zato: fetch → merge admin polja → patch.
+  // Ponavljamo do 3 puta ako sadrzaj u međuvremenu promijeni _seq (ili updated_at).
+  const MAX_RETRY = 3;
+  let attempt = 0;
+  while(attempt < MAX_RETRY){
+    attempt++;
+    const fr = await sbFetchFresh(uid);
+    const existingPlan = getPlan(fr.sadrzaj);
+
+    // Spoji: za svaki nalog u newPlan — preuzmi SAMO admin polja (sifra,ug,ime1,ime2,tel,adr,lat,lng,note + _adminTs).
+    // Fotografova polja (stat, dt) ostaju kakvi su na serveru (tj. u fr.sadrzaj).
+    const ADMIN_FIELDS_PATCH = ['sifra','ug','ime1','ime2','tel','adr','lat','lng','note','_adminTs'];
+    const existingMap = new Map(existingPlan.map(p=>[String(p.id),p]));
+    const safePlan = newPlan.map(np => {
+      const existing = existingMap.get(String(np.id));
+      if(!existing) return np; // novi nalog od admina — prihvati u cijelosti
+      // Nalog postoji — preuzmi fotografova polja, zamijeni samo admin polja
+      const merged = {...existing};
+      ADMIN_FIELDS_PATCH.forEach(f=>{ if(np[f]!==undefined) merged[f]=np[f]; });
+      return merged;
+    });
+    // Dodaj naloge koji postoje na serveru a nisu u newPlan (fotograf ih je možda imao lokalno)
+    const newPlanIds = new Set(newPlan.map(p=>String(p.id)));
+    existingPlan.forEach(ep=>{
+      if(!newPlanIds.has(String(ep.id))) safePlan.push(ep);
+    });
+
+    const merged = {...fr.sadrzaj, a_plan: JSON.stringify(safePlan)};
+    const res = await fetchWithTimeout(`${SB_URL}/rest/v1/podaci?user_id=eq.${uid}`,{
+      method:'PATCH',headers:sbH({'Prefer':'return=minimal'}),body:JSON.stringify({sadrzaj:merged})
+    });
+    if(res.status===401||res.status===403){clearAuth();showLogin();throw new Error('Auth greška.')}
+    if(!res.ok){const t=await res.text();throw new Error(`HTTP ${res.status}: ${t}`)}
+    // Ažuriraj lokalni cache
+    const lr=allRows.find(r=>r.user_id===uid);if(lr)lr.sadrzaj=merged;
+    return; // uspjeh
+  }
+  throw new Error('sbPatchPlan: prekoračen broj pokušaja');
 }
 
 // ── DATA ──
@@ -968,7 +1011,7 @@ async function loadAll(){
     allRows=rows.filter(r=>r.sadrzaj&&(r.sadrzaj.v||r.sadrzaj.autor||r.sadrzaj.a_plan)&&!ADMIN_UIDS.includes(r.user_id));
     sdot('ok');return true;
   }catch(e){
-    if(e.message!=='auth'){sdot('err');toast('Greška učitavanja: '+e.message,true)}
+    if(e.message!=='auth'){sdot('err');toast('Greška učitavanja: '+(e.name==='AbortError'?'Veza nije odgovorila (timeout) — pokušaj ponovo.':e.message),true)}
     allRows=[];return false;
   }
 }
@@ -1050,6 +1093,7 @@ function renderNalozi(){
 
 function renderCard(p){
   const stat=p.stat||'ceka',hasDt=!!p.dt,cls=hasDt?stat:'nodatum';
+  // FIX-SYNC-C: statLbl — jasno razlikujemo "čeka datum" od "na čekanju s datumom"
   const statLbl={ceka:'Na čekanju',obavljeno:'Obavljeno',otkazano:'Otkazano',nodatum:'Čeka datum fotografa'};
   const ime=((p.ime1||'')+' '+(p.ime2||'')).trim();
   const maps=p.lat&&p.lng?`https://maps.google.com/?q=${p.lat},${p.lng}`:p.adr?`https://maps.google.com/?q=${encodeURIComponent(p.adr)}`:'';
@@ -1057,6 +1101,8 @@ function renderCard(p){
   const hasObr=(stat==='obavljeno'||stat==='otkazano')&&!!getObracun(pid);
   const obrBtn=(stat==='obavljeno'||stat==='otkazano')?
     `<button class="btn ${hasObr?'bgrn':'bo'} bsm" onclick="openObracun('${pid}','${selUid}')">${hasObr?'💰 ✓':'💰 Obračun'}</button>`:'';
+  // Prikaz zadnjeg ažuriranja fotografa (_fotoTs) — pomaže adminu pratiti aktivnost
+  const fotoTs = p._fotoTs ? `<span style="font-size:.62rem;color:var(--mut);font-family:var(--mono)" title="Zadnje ažuriranje fotografa">↺ ${fmtDS(new Date(p._fotoTs).toISOString().slice(0,10))}</span>` : '';
   return`<div class="pc ${cls}">
     ${hasDt?`<div class="pc-dt">${fmtD(p.dt)}</div>`:`<div class="pc-dt" style="color:var(--mut);font-style:italic;font-size:.85rem">Datum postavlja fotograf</div>`}
     <span class="ps ${cls}">${statLbl[cls]||statLbl[stat]}</span>
@@ -1066,7 +1112,8 @@ function renderCard(p){
     ${p.adr?`<div class="pr">📍 <a href="${maps}" target="_blank">${esc(p.adr)}</a></div>`:''}
     ${p.note?`<div class="pnote">📝 ${esc(p.note)}</div>`:''}
     <div class="pac">
-      <span class="stat-ro"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Status mijenja fotograf</span>
+      <span class="stat-ro"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Status/datum · fotograf</span>
+      ${fotoTs}
       <div style="margin-left:auto;display:flex;gap:6px">
         ${obrBtn}
         <button class="btn bo bsm" onclick="openNalog('${pid}')">✏️ Uredi</button>
@@ -1434,28 +1481,48 @@ async function saveNalog(){
   const targetUid=v('n-foto');if(!targetUid){toast('Odaberi fotografa!',true);return}
   sdot('busy');
   try{
-    const freshRow=await sbFetchFresh(targetUid);const plan=getPlan(freshRow.sadrzaj);
+    // FIX-SYNC-B: sbPatchPlan sad radi interno fetch + safe merge.
+    // Za edit: dohvatimo fresh plan samo kako bismo izračunali novi plan za patch.
+    // Za novi nalog: prosljeđujemo plan koji sadrži samo novi nalog — sbPatchPlan će mergati.
+    const freshRow=await sbFetchFresh(targetUid);
+    const plan=getPlan(freshRow.sadrzaj);
     if(editPId){
       const idx=plan.findIndex(p=>String(p.id)===String(editPId));
       if(idx<0){toast('Nalog nije pronađen na serveru',true);sdot('err');return}
-      plan[idx]={...plan[idx],sifra:v('n-sifra').trim(),ug:v('n-ug').trim(),
-        ime1:v('n-ime1').trim(),ime2:v('n-ime2').trim(),tel:v('n-tel').trim(),
-        adr:v('n-adr').trim(),lat:v('n-lat').trim(),lng:v('n-lng').trim(),note:v('n-note').trim(),_adminTs:Date.now()};
+      // Mijenjamo samo admin polja — stat i dt ostaju netaknuti (već su u planu sa servera)
+      plan[idx]={
+        ...plan[idx],
+        sifra:v('n-sifra').trim(), ug:v('n-ug').trim(),
+        ime1:v('n-ime1').trim(),   ime2:v('n-ime2').trim(),
+        tel:v('n-tel').trim(),     adr:v('n-adr').trim(),
+        lat:v('n-lat').trim(),     lng:v('n-lng').trim(),
+        note:v('n-note').trim(),
+        _adminTs:Date.now()
+      };
     }else{
-      plan.unshift({id:genId(),stat:'ceka',dt:'',sifra:v('n-sifra').trim(),ug:v('n-ug').trim(),
-        ime1:v('n-ime1').trim(),ime2:v('n-ime2').trim(),tel:v('n-tel').trim(),
-        adr:v('n-adr').trim(),lat:v('n-lat').trim(),lng:v('n-lng').trim(),note:v('n-note').trim(),_adminTs:Date.now()});
+      // Novi nalog — stat:'ceka', dt:'' (fotograf će postaviti)
+      plan.unshift({
+        id:genId(), stat:'ceka', dt:'',
+        sifra:v('n-sifra').trim(), ug:v('n-ug').trim(),
+        ime1:v('n-ime1').trim(),   ime2:v('n-ime2').trim(),
+        tel:v('n-tel').trim(),     adr:v('n-adr').trim(),
+        lat:v('n-lat').trim(),     lng:v('n-lng').trim(),
+        note:v('n-note').trim(),
+        _adminTs:Date.now()
+      });
     }
     await sbPatchPlan(targetUid,plan);
+    // Ako je nalog premješten drugom fotografu
     if(editPId&&targetUid!==selUid){
       const freshOld=await sbFetchFresh(selUid);
       const oldPlan=getPlan(freshOld.sadrzaj).filter(p=>String(p.id)!==String(editPId));
-      await sbPatchPlan(selUid,oldPlan);selUid=targetUid;
+      await sbPatchPlan(selUid,oldPlan);
+      selUid=targetUid;
       g('rpNm').textContent=getAutorIme(getRowByUid(targetUid)?.sadrzaj)||'—';
     }
     closeNalog();renderCurrentView();renderFotografi();sdot('ok');
     toast(editPId?'Nalog ažuriran ✓':'Nalog dodan ✓');
-  }catch(e){sdot('err');toast('Greška: '+e.message,true)}
+  }catch(e){sdot('err');toast('Greška: '+(e.name==='AbortError'?'Veza nije odgovorila (timeout) — pokušaj ponovo.':e.message),true)}
 }
 
 // ── MODAL: OBRAČUN ──
@@ -1590,45 +1657,45 @@ function doSaveObracun(){
 }
 
 // ── REALTIME ──
-let _rtWs=null,_rtRetry=null;
+let _pollTimer=null;
 function rtSetStatus(state){
   const dot=g('rtDot'),lbl=g('rtLbl');if(!dot)return;
-  const map={conn:['','Spajanje…'],live:['live','LIVE'],err:['err','Greška'],off:['','—']};
+  const map={conn:['','Spajanje…'],live:['live','Aktivan'],err:['err','Greška'],off:['','—']};
   const[cls,txt]=map[state]||map.off;dot.className='rt-dot'+(cls?' '+cls:'');lbl.textContent=txt;
 }
-function startRealtime(){
-  if(_rtWs){try{_rtWs.close()}catch(_){}_rtWs=null}
-  clearTimeout(_rtRetry);rtSetStatus('conn');
-  const wsUrl=`wss://${SB_URL.replace('https://','')}/realtime/v1/websocket?apikey=${SB_KEY}&vsn=1.0.0`;
-  const ws=new WebSocket(wsUrl);_rtWs=ws;
-  ws.onopen=()=>ws.send(JSON.stringify({topic:'realtime:public:podaci',event:'phx_join',
-    payload:{config:{broadcast:{self:false},presence:{},postgres_changes:[{event:'UPDATE',schema:'public',table:'podaci'}]}},ref:'1'}));
-  ws.onmessage=async(msg)=>{
-    let d;try{d=JSON.parse(msg.data)}catch{return}
-    if(d.event==='phx_reply'&&d.payload?.status==='ok'){rtSetStatus('live');return}
-    if(d.event==='postgres_changes'){
-      const uid=d.payload?.data?.record?.user_id;if(!uid)return;
-      const ADMIN_UIDS=['d884494d-6be2-4a70-8314-b7d4f60cd381'];if(ADMIN_UIDS.includes(uid))return;
-      try{
-        const fresh=await sbFetchFresh(uid);const row=allRows.find(r=>r.user_id===uid);
-        if(row){row.sadrzaj=fresh.sadrzaj;renderFotografi();if(uid===selUid){renderCurrentView();toast('↺ Realtime ažuriranje')}}
-      }catch(e){console.warn('RT:',e.message)}
-    }
-  };
-  const hb=setInterval(()=>{
-    if(ws.readyState===WebSocket.OPEN)ws.send(JSON.stringify({topic:'phoenix',event:'heartbeat',payload:{},ref:null}));
-    else clearInterval(hb);
-  },30000);
-  ws.onerror=()=>rtSetStatus('err');
-  ws.onclose=()=>{clearInterval(hb);rtSetStatus('err');if(jwt)_rtRetry=setTimeout(startRealtime,5000)};
+const POLL_INTERVAL=20000; // provjera svakih 20 sekundi
+const ADMIN_UIDS_POLL=['d884494d-6be2-4a70-8314-b7d4f60cd381'];
+async function pollOnce(){
+  try{
+    const rows=await sbGet('podaci?select=id,user_id,sadrzaj&order=created_at.asc');
+    const fresh=rows.filter(r=>r.sadrzaj&&(r.sadrzaj.v||r.sadrzaj.autor||r.sadrzaj.a_plan)&&!ADMIN_UIDS_POLL.includes(r.user_id));
+    let changed=false;
+    fresh.forEach(fr=>{
+      const existing=allRows.find(r=>r.user_id===fr.user_id);
+      if(!existing){allRows.push(fr);changed=true;}
+      else if(JSON.stringify(existing.sadrzaj)!==JSON.stringify(fr.sadrzaj)){
+        existing.sadrzaj=fr.sadrzaj;changed=true;
+      }
+    });
+    if(changed){renderFotografi();if(selUid)renderCurrentView();}
+    rtSetStatus('live');
+  }catch(e){
+    console.warn('Poll greška:',e.message);
+    rtSetStatus('err');
+  }
 }
-function stopRealtime(){clearTimeout(_rtRetry);if(_rtWs){try{_rtWs.close()}catch(_){}_rtWs=null}rtSetStatus('off')}
+function startPolling(){
+  rtSetStatus('conn');
+  pollOnce();
+  _pollTimer=setInterval(pollOnce,POLL_INTERVAL);
+}
+function stopPolling(){clearInterval(_pollTimer);_pollTimer=null;rtSetStatus('off');}
 
 async function refreshAll(){const ok=await loadAll();if(ok){renderFotografi();renderCurrentView();toast('Osvježeno ✓')}}
 
 async function startApp(){
   try{
-    const chk=await fetch(`${SB_URL}/rest/v1/admins?user_id=eq.${myUid}&select=user_id`,
+    const chk=await fetchWithTimeout(`${SB_URL}/rest/v1/admins?user_id=eq.${myUid}&select=user_id`,
       {headers:{'apikey':SB_KEY,'Authorization':`Bearer ${jwt}`}});
     const rows=chk.ok?await chk.json():[];
     if(!rows.length){clearAuth();const e=g('lErr');e.textContent='⛔ Pristup odbijen.';e.style.display='block';showLogin();return}
@@ -1639,7 +1706,7 @@ async function startApp(){
   const ok=await loadAll();
   if(ok){renderFotografi();renderCurrentView();
     if(myUid&&allRows.find(r=>r.user_id===myUid))selFotograf(myUid);
-    startRealtime();
+    startPolling();
   }
 }
 
