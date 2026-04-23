@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Adriatic Nalozi v3.0 beta</title>
+<title>Adriatic Nalozi v3.0</title>
 <link rel="manifest" href="manifest-nalozi.json">
 <meta name="theme-color" content="#0b0c0e" id="themeColorMeta">
 <meta name="description" content="Upravljanje nalozima i obračunima — Adriatic.hr">
@@ -973,7 +973,7 @@ async function sbPatchPlan(uid,newPlan){
 
     // Spoji: za svaki nalog u newPlan — preuzmi SAMO admin polja (sifra,ug,ime1,ime2,tel,adr,lat,lng,note + _adminTs).
     // Fotografova polja (stat, dt) ostaju kakvi su na serveru (tj. u fr.sadrzaj).
-    const ADMIN_FIELDS_PATCH = ['sifra','ug','ime1','ime2','tel','adr','lat','lng','note','_adminTs'];
+    const ADMIN_FIELDS_PATCH = ['sifra','ug','ime1','ime2','tel','adr','lat','lng','_adminTs']; // note je fotografovo polje
     const existingMap = new Map(existingPlan.map(p=>[String(p.id),p]));
     const safePlan = newPlan.map(np => {
       const existing = existingMap.get(String(np.id));
