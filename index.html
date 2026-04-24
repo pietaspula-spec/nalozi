@@ -208,6 +208,8 @@ textarea{resize:vertical;min-height:58px;font-size:.82rem;line-height:1.5}
 .calc-row.total{font-weight:700;color:var(--txt);font-size:.83rem;padding-top:6px;margin-top:4px;border-top:1px solid var(--brd2)}
 .calc-row.neto{font-weight:800;color:var(--acc);font-size:.95rem;padding-top:6px;margin-top:4px;border-top:2px solid var(--acc2)}
 .calc-row span.mono{font-family:var(--mono)}
+.field-hint{font-size:.66rem;color:var(--mut);margin-top:5px;line-height:1.35}
+.field-hint.photo{color:var(--grn)}
 
 /* Checkbox label */
 .chk-lbl{display:flex;align-items:center;gap:9px;cursor:pointer;background:var(--surf2);border:1px solid var(--brd);border-radius:8px;padding:9px 12px;transition:border-color .15s}
@@ -257,11 +259,24 @@ textarea{resize:vertical;min-height:58px;font-size:.82rem;line-height:1.5}
 .print-header{display:none}
 @media print{
   @page{size:A4 landscape;margin:8mm 10mm}
-  html,body{overflow:visible!important;height:auto!important;background:#fff!important;color:#000!important;font-size:9px}
+  html,body{
+    overflow:visible!important;
+    height:auto!important;
+    width:297mm!important;
+    min-width:297mm!important;
+    max-width:297mm!important;
+    background:#fff!important;
+    color:#000!important;
+    font-size:9px;
+    -webkit-print-color-adjust:exact!important;
+    print-color-adjust:exact!important
+  }
   body *{transition:none!important}
   header,.lp,.vt-bar,.rp-hd,.rp-fr,.iz-topbar,.sdbg,.sdrawer,.cbg,.mbg,.toast,
   .hmenu-btn,.hbtn,.theme-sl,.btn,.ft,.pac,.obr-card,.iz-stats{display:none!important}
+  #app{display:block!important;width:100%!important;max-width:none!important}
   .app-body{position:static!important;overflow:visible!important;height:auto!important}
+  .app-body,.rp,.rp-list,#nList{width:100%!important;max-width:none!important}
   .rp{position:static!important;overflow:visible!important;height:auto!important;min-width:0!important}
   .rp-list{overflow:visible!important;height:auto!important;padding:0!important}
 
@@ -522,7 +537,8 @@ textarea{resize:vertical;min-height:58px;font-size:.82rem;line-height:1.5}
       <div><label>Broj fotografiranih kategorija</label>
         <input type="number" id="obr-kat" placeholder="0" min="0" step="1" oninput="calcObracunLive()"></div>
       <div><label>Udaljenost — jedna relacija (km)</label>
-        <input type="number" id="obr-km" placeholder="0" min="0" step="0.1" oninput="calcObracunLive()"></div>
+        <input type="number" id="obr-km" placeholder="0" min="0" step="0.1" oninput="calcObracunLive()">
+        <div class="field-hint photo" id="obr-km-hint" style="display:none">Foto prijedlog iz FotoKalka</div></div>
     </div>
 
     <!-- Checkboxovi -->
@@ -543,7 +559,8 @@ textarea{resize:vertical;min-height:58px;font-size:.82rem;line-height:1.5}
 
     <div class="fr">
       <div><label>Ostali troškovi — trajekt, cestarina, itd. (€)</label>
-        <input type="number" id="obr-ostalo" placeholder="0.00" min="0" step="0.5" oninput="calcObracunLive()"></div>
+        <input type="number" id="obr-ostalo" placeholder="0.00" min="0" step="0.5" oninput="calcObracunLive()">
+        <div class="field-hint photo" id="obr-ostalo-hint" style="display:none">Foto prijedlog iz FotoKalka</div></div>
     </div>
 
     <!-- Verificirano -->
@@ -584,7 +601,15 @@ textarea{resize:vertical;min-height:58px;font-size:.82rem;line-height:1.5}
       <div><label>Prezime vlasnika</label><input type="text" id="n-ime2" placeholder="Prezime" autocomplete="off"></div>
     </div>
     <div class="fr"><div><label>Telefon vlasnika</label><input type="tel" id="n-tel" placeholder="+385…"></div></div>
-    <div class="fr"><div><label>Adresa objekta</label><input type="text" id="n-adr" placeholder="Ulica br., Pula" autocomplete="off"></div></div>
+    <div class="fr"><div><label>Adresa objekta</label><input type="text" id="n-adr" placeholder="Ulica i broj" autocomplete="off"></div></div>
+    <div class="fr c2">
+      <div><label>Poštanski broj</label><input type="text" id="n-pbr" placeholder="52100" autocomplete="off"></div>
+      <div><label>Grad</label><input type="text" id="n-grad" placeholder="Pula" autocomplete="off"></div>
+    </div>
+    <div class="fr c2">
+      <div><label>Broj smještajnih jedinica</label><input type="number" id="n-jed" placeholder="0" min="0" step="1"></div>
+      <div><label>Link na objekt (adriatic.hr)</label><input type="url" id="n-link" placeholder="https://www.adriatic.hr/..." autocomplete="off"></div>
+    </div>
     <div class="fr c2">
       <div><label>GPS lat</label><input type="text" id="n-lat" placeholder="44.8666…"></div>
       <div><label>GPS lng</label><input type="text" id="n-lng" placeholder="13.8496…"></div>
@@ -981,7 +1006,7 @@ async function sbPatchPlan(uid,newPlan,opts={}){
     // Pobjeđuje novija izmjena: _adminTs vs _fotoTs.
     const SHARED_SYNC_FIELDS = ['sifra','ug','ime1','ime2','tel','adr','lat','lng'];
     // Admin-only polja ostaju u domeni agencije.
-    const ADMIN_ONLY_FIELDS_PATCH = ['note_agencija','note','_adminTs'];
+    const ADMIN_ONLY_FIELDS_PATCH = ['jed','link','note_agencija','note','_adminTs'];
     const existingMap = new Map(existingPlan.map(p=>[String(p.id),p]));
     const safePlan = newPlan.map(np => {
       const existing = existingMap.get(String(np.id));
@@ -1361,6 +1386,7 @@ function izScopeBar(){
     <div style="margin-left:auto;display:flex;gap:6px">
       <button class="btn bo bsm" onclick="exportExcel()">⬇ Excel</button>
       <button class="btn bo bsm" onclick="printWithTitle()">🖨 Print/PDF</button>
+      <button class="btn bo bsm" onclick="printArchiveReport()">🗂 Arhiva</button>
       <button class="btn bo bsm" onclick="batchPrint()" title="Ispiši sve fotografe zasebno">🖨 Batch</button>
     </div>
   </div>`;
@@ -1380,6 +1406,183 @@ function printWithTitle(){
   toast(`PDF: ${newTitle}`);
   window.onafterprint=()=>{ titleEl.textContent=prev; window.onafterprint=null; };
   window.print();
+}
+
+function printArchiveReport(){
+  const filterUid=izScope==='sel'?selUid:null;
+  if(izScope==='sel'&&!selUid){toast('Odaberi fotografa',true);return}
+  let data=getAllObracuniData(filterUid);
+  if(izMonth!=='all')data=data.filter(d=>(d.nalog.dt||'0000-00').startsWith(izMonth));
+  if(!data.length){toast('Nema obračunanih naloga za arhivu',true);return}
+
+  data=[...data].sort((a,b)=>(a.nalog.dt||'').localeCompare(b.nalog.dt||'')||(a.nalog.ug||'').localeCompare(b.nalog.ug||''));
+
+  const fotoNm=izScope==='sel'?(getAutorIme(getRowByUid(selUid)?.sadrzaj)||'Fotograf'):'Svi fotografi';
+  const period=izMonth==='all'?'Sve razdoblje':fmtMonth(izMonth);
+  const reportTitle=`IZVJEŠTAJ O OSTVARENIM AUTORSKIM DJELIMA PO NARUDŽBI ZA ${izMonth==='all'?'ARHIVU':izMonth.replace('-','/')}`;
+  const totalBruto=data.reduce((s,d)=>s+(d.obr.bruto||0),0);
+  const totalB2=data.reduce((s,d)=>s+(d.obr.b2||0),0);
+  const totalNeto=data.reduce((s,d)=>s+(d.obr.neto||0),0);
+
+  const rows=data.map(({nalog,obr,fotoIme},idx)=>{
+    const mjesto=nalog.adr||'—';
+    const kontakt=nalog.tel||nalog.dt_kontakt||obr.dtKontakt||'—';
+    const komentar=nalog.note_foto||'—';
+    const napAg=nalog.note_agencija||nalog.note||'—';
+    const brojJed=nalog.jed||'—';
+    const link=nalog.link?`<a href="${esc(nalog.link)}" target="_blank" rel="noopener noreferrer">link</a>`:'—';
+    const dtKontakt=nalog.dt_kontakt||obr.dtKontakt||'—';
+    const dtObrada=nalog.dt_obrada||'—';
+    const dtIsporuka=nalog.dt_isporuka||obr.dtIsporuka||'—';
+    const pd=obr.pd!=null?`${obr.pd}%`:'—';
+    const ver=obr.verificirano?'DA':'—';
+    const otk=obr.otkaz?'DA':'—';
+    return `<tr>
+      <td class="c">${idx+1}</td>
+      <td>${fmtDS(nalog.dt)}</td>
+      <td>${esc(nalog.sifra||'—')}</td>
+      <td class="c">${esc(String(brojJed))}</td>
+      <td>${esc(mjesto)}</td>
+      <td>${esc(nalog.ime1||'')} ${esc(nalog.ime2||'')}</td>
+      <td>${esc(nalog.tel||'—')}</td>
+      <td>${esc(napAg)}</td>
+      <td>${esc(komentar)}</td>
+      <td class="c">${link}</td>
+      <td class="c">${obr.otkaz?'—':esc(String(obr.kat||0))}</td>
+      <td>${dtKontakt!=='—'?fmtDS(dtKontakt):'—'}</td>
+      <td>${dtObrada!=='—'?fmtDS(dtObrada):'—'}</td>
+      <td>${dtIsporuka!=='—'?fmtDS(dtIsporuka):'—'}</td>
+      <td>${esc(obr.dogovoreno||'Adriatic.hr')}</td>
+      <td class="num">${obr.km||0}</td>
+      <td class="num">${m2(obr.ostalo||0)}</td>
+      <td class="num">${m2(obr.bKat||0)}</td>
+      <td class="num">${m2(obr.bDron||0)}</td>
+      <td class="num">${m2(obr.bOt||0)}</td>
+      <td class="num">${m2(obr.bKm||0)}</td>
+      <td class="num">${m2(obr.ostalo||0)}</td>
+      <td class="num strong">${m2(obr.bruto||0)}</td>
+      <td class="num">${m2(obr.brutoIsplata||0)}</td>
+      <td class="num">${m2(obr.b2||0)}</td>
+      <td class="c">${pd}</td>
+      <td class="num strong">${m2(obr.neto||0)}</td>
+      <td class="c">${ver}</td>
+      <td class="c">${otk}</td>
+      ${izScope==='all'?`<td>${esc(fotoIme)}</td>`:''}
+    </tr>`;
+  }).join('');
+
+  const html=`<!DOCTYPE html>
+  <html lang="hr"><head><meta charset="UTF-8"><title>${reportTitle}</title>
+  <style>
+    @page{size:A4 landscape;margin:8mm}
+    body{font-family:Segoe UI,Arial,sans-serif;color:#111;margin:0}
+    .wrap{width:100%;max-width:none}
+    .hd{margin-bottom:8px}
+    .hd-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px}
+    .brand{font-size:18px;font-weight:900}
+    .sub{font-size:11px;color:#444;margin-top:2px}
+    .meta{font-size:11px;text-align:right;line-height:1.5}
+    .bar{background:#39ff14;border:1px solid #111;padding:6px 10px;font-weight:900;text-align:center;font-size:16px}
+    .scope{display:flex;justify-content:space-between;font-size:11px;padding:6px 2px 0}
+    table{width:100%;border-collapse:collapse;table-layout:fixed}
+    th,td{border:1px solid #111;padding:3px 4px;font-size:10px;vertical-align:top;word-wrap:break-word}
+    th{background:#ffd9b3}
+    th.grp{background:#39ff14;font-size:12px;font-style:italic;text-align:center}
+    th.subgrp{background:#7dff5d;font-size:11px;text-align:center}
+    td.c{text-align:center}
+    td.num{text-align:right;font-family:Consolas,monospace;white-space:nowrap}
+    td.strong{font-weight:800}
+    tfoot td{font-weight:800;background:#eef7ff}
+    a{color:#0a58ca;text-decoration:none}
+  </style></head><body>
+    <div class="wrap">
+      <div class="hd">
+        <div class="hd-top">
+          <div>
+            <div class="brand">Adriatic Nalozi</div>
+            <div class="sub">Arhivski mjesečni izvještaj za interne evidencije</div>
+          </div>
+          <div class="meta">
+            <div><strong>Razdoblje:</strong> ${esc(period)}</div>
+            <div><strong>Fotograf:</strong> ${esc(fotoNm)}</div>
+            <div><strong>Ispis:</strong> ${fmtDS(today())}</div>
+          </div>
+        </div>
+        <div class="bar">${esc(reportTitle)}</div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th class="grp" colspan="4">Ugovor</th>
+            <th class="grp" colspan="6">Ugostiteljski objekt</th>
+            <th class="grp" colspan="4">Obrada (fotografiranje i popisivanje)</th>
+            <th class="grp" colspan="1">Akvizicija</th>
+            <th class="grp" colspan="2">Putni troškovi</th>
+            <th class="grp" colspan="6">Bruto honorar</th>
+            <th class="grp" colspan="1">Bruto Isplata</th>
+            <th class="grp" colspan="1">Bruto Isplata2</th>
+            <th class="grp" colspan="1">Porez</th>
+            <th class="grp" colspan="1">Neto Isplata</th>
+            <th class="grp" colspan="2">Status</th>
+            ${izScope==='all'?'<th class="grp" colspan="1">Fotograf</th>':''}
+          </tr>
+          <tr>
+            <th>broj</th>
+            <th>datum</th>
+            <th>šifra objekta</th>
+            <th>broj smj. jed.</th>
+            <th>mjesto / adresa</th>
+            <th>iznajmljivač</th>
+            <th>kontakt</th>
+            <th>napomena agencije</th>
+            <th>komentar fotografa</th>
+            <th>link</th>
+            <th>broj kategorija</th>
+            <th>datum kontakt.</th>
+            <th>datum obrade</th>
+            <th>isporučeno</th>
+            <th>dogovoreno</th>
+            <th>udaljenost (km)</th>
+            <th>ostalo (eur)</th>
+            <th>fotografiranje</th>
+            <th>dron</th>
+            <th>trošak otkaza</th>
+            <th>put</th>
+            <th>ostalo</th>
+            <th>ukupno</th>
+            <th>iznos</th>
+            <th>iznos</th>
+            <th>postotak</th>
+            <th>iznos</th>
+            <th>verificirano</th>
+            <th>otkazano snimanje</th>
+            ${izScope==='all'?'<th>fotograf</th>':''}
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+        <tfoot>
+          <tr>
+            <td colspan="${izScope==='all'?23:22}">Ukupno ${esc(period)}</td>
+            <td class="num">${m2(totalBruto)}</td>
+            <td class="num">—</td>
+            <td class="num">${m2(totalB2)}</td>
+            <td class="c">—</td>
+            <td class="num">${m2(totalNeto)}</td>
+            <td class="c">—</td>
+            <td class="c">—</td>
+            ${izScope==='all'?'<td>—</td>':''}
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+    <script>window.onload=()=>{setTimeout(()=>window.print(),150)}<\/script>
+  </body></html>`;
+
+  const w=window.open('','_blank');
+  if(!w){toast('Popup je blokiran — dopusti otvaranje novog prozora za ispis.',true);return}
+  w.document.open();
+  w.document.write(html);
+  w.document.close();
 }
 
 function batchPrint(){
@@ -1506,6 +1709,8 @@ function openNalog(planId){
     g('n-sifra').value=item.sifra||'';g('n-ug').value=item.ug||'';
     g('n-ime1').value=item.ime1||'';g('n-ime2').value=item.ime2||'';
     g('n-tel').value=item.tel||'';g('n-adr').value=item.adr||'';
+    g('n-jed').value=item.jed!=null&&item.jed!==''?item.jed:'';
+    g('n-link').value=item.link||'';
     g('n-lat').value=item.lat||'';g('n-lng').value=item.lng||'';
     g('n-note-ag').value=item.note_agencija||item.note||'';popFotoSel(selUid);
     // Prikaz foto komentara u read-only dijelu
@@ -1520,7 +1725,7 @@ function openNalog(planId){
       g('n-foto-dates').textContent=dtParts.join('   ');
     }
   }else{
-    ['n-sifra','n-ug','n-ime1','n-ime2','n-tel','n-adr','n-lat','n-lng','n-note-ag'].forEach(id=>g(id).value='');
+    ['n-sifra','n-ug','n-ime1','n-ime2','n-tel','n-adr','n-jed','n-link','n-lat','n-lng','n-note-ag'].forEach(id=>g(id).value='');
     g('n-foto-info').style.display='none';
     popFotoSel(selUid);
   }
@@ -1546,6 +1751,7 @@ async function saveNalog(){
         sifra:v('n-sifra').trim(), ug:v('n-ug').trim(),
         ime1:v('n-ime1').trim(),   ime2:v('n-ime2').trim(),
         tel:v('n-tel').trim(),     adr:v('n-adr').trim(),
+        jed:parseInt(v('n-jed'))||0, link:v('n-link').trim(),
         lat:v('n-lat').trim(),     lng:v('n-lng').trim(),
         note_agencija:v('n-note-ag').trim(),
         _adminTs:Date.now()
@@ -1557,6 +1763,7 @@ async function saveNalog(){
         sifra:v('n-sifra').trim(), ug:v('n-ug').trim(),
         ime1:v('n-ime1').trim(),   ime2:v('n-ime2').trim(),
         tel:v('n-tel').trim(),     adr:v('n-adr').trim(),
+        jed:parseInt(v('n-jed'))||0, link:v('n-link').trim(),
         lat:v('n-lat').trim(),     lng:v('n-lng').trim(),
         note_agencija:v('n-note-ag').trim(),
         note_foto:'', dt_kontakt:'', dt_obrada:'', dt_isporuka:'',
@@ -1599,8 +1806,9 @@ function openObracun(planId,uid){
 
   const ex=getObracun(planId);
   g('obr-kat').value=ex?.kat!=null?ex.kat:'';
-  g('obr-km').value=ex?.km!=null?ex.km:'';
-  g('obr-ostalo').value=ex?.ostalo!=null?ex.ostalo:'';
+  g('obr-km').value=ex?.km!=null?ex.km:(item.put_km!=null&&item.put_km!==''?item.put_km:'');
+  g('obr-ostalo').value=ex?.ostalo!=null?ex.ostalo:(item.put_ostalo!=null&&item.put_ostalo!==''?item.put_ostalo:'');
+  setObracunPhotoHints(item, ex);
   g('obr-dtKontakt').value=ex?.dtKontakt||'';
   g('obr-dtIsporuka').value=ex?.dtIsporuka||'';
   g('obr-dogovoreno').value=ex?.dogovoreno||'Adriatic.hr';
@@ -1614,6 +1822,12 @@ function openObracun(planId,uid){
   g('obrModal').classList.add('on');setTimeout(()=>g('obr-kat').focus(),60);
 }
 function closeObracun(){g('obrModal').classList.remove('on');obrNalogId=null;obrFotoUid=null}
+function setObracunPhotoHints(item, ex){
+  const kmHint=g('obr-km-hint');
+  const ostHint=g('obr-ostalo-hint');
+  if(kmHint) kmHint.style.display=(!ex && item?.put_km!=null && item.put_km!=='')?'block':'none';
+  if(ostHint) ostHint.style.display=(!ex && item?.put_ostalo!=null && item.put_ostalo!=='')?'block':'none';
+}
 
 function toggleOtkazFields(){
   const isOtkaz=g('obr-otkaz')?.checked||false;
