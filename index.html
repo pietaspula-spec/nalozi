@@ -589,8 +589,13 @@ textarea{resize:vertical;min-height:58px;font-size:.82rem;line-height:1.5}
       <div><label>GPS lat</label><input type="text" id="n-lat" placeholder="44.8666…"></div>
       <div><label>GPS lng</label><input type="text" id="n-lng" placeholder="13.8496…"></div>
     </div>
-    <div class="fr"><div><label>Komentar / Napomena</label>
-      <textarea id="n-note" placeholder="Posebne upute, pristup, ključevi…"></textarea></div></div>
+    <div class="fr"><div><label>📋 Napomena agencije</label>
+      <textarea id="n-note-ag" placeholder="Posebne upute, pristup, ključevi, kontekst za fotografa…" rows="3"></textarea></div></div>
+    <div class="fr" id="n-foto-info" style="display:none"><div>
+      <label>💬 Komentar fotografa <span style="font-size:.68rem;color:var(--mut)">(samo za čitanje)</span></label>
+      <textarea id="n-note-foto-ro" readonly rows="2" style="background:var(--bg2,#f4f4f4);color:var(--mut,#888);border-style:dashed"></textarea>
+      <div style="display:flex;gap:16px;margin-top:6px;font-size:.72rem;color:var(--mut)" id="n-foto-dates"></div>
+    </div></div>
     <div class="ma">
       <button class="btn bo" onclick="closeNalog()">Odustani</button>
       <button class="btn bp" onclick="saveNalog()">💾 Spremi nalog</button>
@@ -926,7 +931,7 @@ async function doLogin(){
   }catch(e){err.textContent=(e.name==='AbortError'?'Veza nije odgovorila (timeout) — pokušaj ponovo.':'Greška veze: '+e.message);err.style.display='block'}
   finally{btn.disabled=false;btn.textContent='Prijava →'}
 }
-function doLogout(){confirm2('Odjavi se?',()=>{stopPolling();clearAuth();allRows=[];selUid=null;showLogin()})}
+function doLogout(){confirm2('Odjavi se?',()=>{stopRealtime();clearAuth();allRows=[];selUid=null;showLogin()})}
 
 document.addEventListener('keydown',e=>{
   if(e.key==='Enter'&&g('loginScreen').style.display!=='none')doLogin();
@@ -971,9 +976,9 @@ async function sbPatchPlan(uid,newPlan){
     const fr = await sbFetchFresh(uid);
     const existingPlan = getPlan(fr.sadrzaj);
 
-    // Spoji: za svaki nalog u newPlan — preuzmi SAMO admin polja (sifra,ug,ime1,ime2,tel,adr,lat,lng,note + _adminTs).
-    // Fotografova polja (stat, dt) ostaju kakvi su na serveru (tj. u fr.sadrzaj).
-    const ADMIN_FIELDS_PATCH = ['sifra','ug','ime1','ime2','tel','adr','lat','lng','_adminTs']; // note je fotografovo polje
+    // Spoji: za svaki nalog u newPlan — preuzmi SAMO admin polja.
+    // Fotografova polja (stat, dt, note_foto, dt_kontakt, dt_obrada, dt_isporuka) ostaju sa servera.
+    const ADMIN_FIELDS_PATCH = ['sifra','ug','ime1','ime2','tel','adr','lat','lng','note_agencija','_adminTs'];
     const existingMap = new Map(existingPlan.map(p=>[String(p.id),p]));
     const safePlan = newPlan.map(np => {
       const existing = existingMap.get(String(np.id));
@@ -1102,15 +1107,29 @@ function renderCard(p){
   const obrBtn=(stat==='obavljeno'||stat==='otkazano')?
     `<button class="btn ${hasObr?'bgrn':'bo'} bsm" onclick="openObracun('${pid}','${selUid}')">${hasObr?'💰 ✓':'💰 Obračun'}</button>`:'';
   // Prikaz zadnjeg ažuriranja fotografa (_fotoTs) — pomaže adminu pratiti aktivnost
+  // Zelena kuglica — fotograf promijenio nešto nakon što je admin zadnji puta vidio
+  const seenTs = parseInt(localStorage.getItem('nseen_'+p.id)||'0');
+  const hasNew = p._fotoTs && p._fotoTs > seenTs;
+  const newDot = hasNew ? `<span title="Fotograf je ažurirao nalog" style="display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--grn,#22c55e);margin-left:6px;vertical-align:middle;box-shadow:0 0 4px var(--grn,#22c55e)"></span>` : '';
   const fotoTs = p._fotoTs ? `<span style="font-size:.62rem;color:var(--mut);font-family:var(--mono)" title="Zadnje ažuriranje fotografa">↺ ${fmtDS(new Date(p._fotoTs).toISOString().slice(0,10))}</span>` : '';
+  // Napomena agencije (migracija: stariji zapisi imaju 'note')
+  const noteAg = p.note_agencija || p.note || '';
+  // Komentar fotografa + datumi
+  const noteFoto = p.note_foto ? `<div class="pnote" style="background:var(--bg2,#f0f7f0);border-left:3px solid var(--grn,#22c55e)">💬 ${esc(p.note_foto)}</div>` : '';
+  const dtKontakt = p.dt_kontakt ? `<span>📞 ${fmtDS(p.dt_kontakt)}</span>` : '';
+  const dtObrada = p.dt_obrada ? `<span>🔧 ${fmtDS(p.dt_obrada)}</span>` : '';
+  const dtIsporuka = p.dt_isporuka ? `<span>📦 ${fmtDS(p.dt_isporuka)}</span>` : '';
+  const fotoDates = (dtKontakt||dtObrada||dtIsporuka) ? `<div style="display:flex;gap:12px;flex-wrap:wrap;font-size:.7rem;color:var(--mut);margin-top:2px">${dtKontakt}${dtObrada}${dtIsporuka}</div>` : '';
   return`<div class="pc ${cls}">
     ${hasDt?`<div class="pc-dt">${fmtD(p.dt)}</div>`:`<div class="pc-dt" style="color:var(--mut);font-style:italic;font-size:.85rem">Datum postavlja fotograf</div>`}
-    <span class="ps ${cls}">${statLbl[cls]||statLbl[stat]}</span>
+    <span class="ps ${cls}">${statLbl[cls]||statLbl[stat]}</span>${newDot}
     ${p.sifra?`<div class="pr">🔑 <strong style="color:var(--acc);font-family:var(--mono)">#${esc(p.sifra)}</strong></div>`:''}
     ${p.ug?`<div class="pr">📄 ${esc(p.ug)}</div>`:''}
     ${ime?`<div class="pr">👤 ${esc(ime)}${p.tel?' · <a href="tel:'+esc(p.tel)+'">'+esc(p.tel)+'</a>':''}</div>`:''}
     ${p.adr?`<div class="pr">📍 <a href="${maps}" target="_blank">${esc(p.adr)}</a></div>`:''}
-    ${p.note?`<div class="pnote">📝 ${esc(p.note)}</div>`:''}
+    ${noteAg?`<div class="pnote">📋 ${esc(noteAg)}</div>`:''}
+    ${noteFoto}
+    ${fotoDates}
     <div class="pac">
       <span class="stat-ro"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Status/datum · fotograf</span>
       ${fotoTs}
@@ -1468,9 +1487,23 @@ function openNalog(planId){
     g('n-ime1').value=item.ime1||'';g('n-ime2').value=item.ime2||'';
     g('n-tel').value=item.tel||'';g('n-adr').value=item.adr||'';
     g('n-lat').value=item.lat||'';g('n-lng').value=item.lng||'';
-    g('n-note').value=item.note||'';popFotoSel(selUid);
+    g('n-note-ag').value=item.note_agencija||item.note||'';popFotoSel(selUid);
+    // Prikaz foto komentara u read-only dijelu
+    const hasFoto=!!(item.note_foto||item.dt_kontakt||item.dt_obrada||item.dt_isporuka);
+    g('n-foto-info').style.display=hasFoto?'':'none';
+    if(hasFoto){
+      g('n-note-foto-ro').value=item.note_foto||'—';
+      const dtParts=[];
+      if(item.dt_kontakt)dtParts.push('📞 Kontaktiran: '+fmtDS(item.dt_kontakt));
+      if(item.dt_obrada)dtParts.push('🔧 Obrada: '+fmtDS(item.dt_obrada));
+      if(item.dt_isporuka)dtParts.push('📦 Isporučeno: '+fmtDS(item.dt_isporuka));
+      g('n-foto-dates').textContent=dtParts.join('   ');
+    }
+    // Označi kao viđeno
+    if(item._fotoTs)localStorage.setItem('nseen_'+item.id, item._fotoTs);
   }else{
-    ['n-sifra','n-ug','n-ime1','n-ime2','n-tel','n-adr','n-lat','n-lng','n-note'].forEach(id=>g(id).value='');
+    ['n-sifra','n-ug','n-ime1','n-ime2','n-tel','n-adr','n-lat','n-lng','n-note-ag'].forEach(id=>g(id).value='');
+    g('n-foto-info').style.display='none';
     popFotoSel(selUid);
   }
   g('nModal').classList.add('on');setTimeout(()=>g('n-sifra').focus(),60);
@@ -1496,7 +1529,7 @@ async function saveNalog(){
         ime1:v('n-ime1').trim(),   ime2:v('n-ime2').trim(),
         tel:v('n-tel').trim(),     adr:v('n-adr').trim(),
         lat:v('n-lat').trim(),     lng:v('n-lng').trim(),
-        note:v('n-note').trim(),
+        note_agencija:v('n-note-ag').trim(),
         _adminTs:Date.now()
       };
     }else{
@@ -1507,7 +1540,8 @@ async function saveNalog(){
         ime1:v('n-ime1').trim(),   ime2:v('n-ime2').trim(),
         tel:v('n-tel').trim(),     adr:v('n-adr').trim(),
         lat:v('n-lat').trim(),     lng:v('n-lng').trim(),
-        note:v('n-note').trim(),
+        note_agencija:v('n-note-ag').trim(),
+        note_foto:'', dt_kontakt:'', dt_obrada:'', dt_isporuka:'',
         _adminTs:Date.now()
       });
     }
@@ -1657,39 +1691,39 @@ function doSaveObracun(){
 }
 
 // ── REALTIME ──
-let _pollTimer=null;
+let _rtWs=null,_rtRetry=null;
 function rtSetStatus(state){
   const dot=g('rtDot'),lbl=g('rtLbl');if(!dot)return;
-  const map={conn:['','Spajanje…'],live:['live','Aktivan'],err:['err','Greška'],off:['','—']};
+  const map={conn:['','Spajanje…'],live:['live','LIVE'],err:['err','Greška'],off:['','—']};
   const[cls,txt]=map[state]||map.off;dot.className='rt-dot'+(cls?' '+cls:'');lbl.textContent=txt;
 }
-const POLL_INTERVAL=20000; // provjera svakih 20 sekundi
-const ADMIN_UIDS_POLL=['d884494d-6be2-4a70-8314-b7d4f60cd381'];
-async function pollOnce(){
-  try{
-    const rows=await sbGet('podaci?select=id,user_id,sadrzaj&order=created_at.asc');
-    const fresh=rows.filter(r=>r.sadrzaj&&(r.sadrzaj.v||r.sadrzaj.autor||r.sadrzaj.a_plan)&&!ADMIN_UIDS_POLL.includes(r.user_id));
-    let changed=false;
-    fresh.forEach(fr=>{
-      const existing=allRows.find(r=>r.user_id===fr.user_id);
-      if(!existing){allRows.push(fr);changed=true;}
-      else if(JSON.stringify(existing.sadrzaj)!==JSON.stringify(fr.sadrzaj)){
-        existing.sadrzaj=fr.sadrzaj;changed=true;
-      }
-    });
-    if(changed){renderFotografi();if(selUid)renderCurrentView();}
-    rtSetStatus('live');
-  }catch(e){
-    console.warn('Poll greška:',e.message);
-    rtSetStatus('err');
-  }
+function startRealtime(){
+  if(_rtWs){try{_rtWs.close()}catch(_){}_rtWs=null}
+  clearTimeout(_rtRetry);rtSetStatus('conn');
+  const wsUrl=`wss://${SB_URL.replace('https://','')}/realtime/v1/websocket?apikey=${SB_KEY}&vsn=1.0.0`;
+  const ws=new WebSocket(wsUrl);_rtWs=ws;
+  ws.onopen=()=>ws.send(JSON.stringify({topic:'realtime:public:podaci',event:'phx_join',
+    payload:{config:{broadcast:{self:false},presence:{},postgres_changes:[{event:'UPDATE',schema:'public',table:'podaci'}]}},ref:'1'}));
+  ws.onmessage=async(msg)=>{
+    let d;try{d=JSON.parse(msg.data)}catch{return}
+    if(d.event==='phx_reply'&&d.payload?.status==='ok'){rtSetStatus('live');return}
+    if(d.event==='postgres_changes'){
+      const uid=d.payload?.data?.record?.user_id;if(!uid)return;
+      const ADMIN_UIDS=['d884494d-6be2-4a70-8314-b7d4f60cd381'];if(ADMIN_UIDS.includes(uid))return;
+      try{
+        const fresh=await sbFetchFresh(uid);const row=allRows.find(r=>r.user_id===uid);
+        if(row){row.sadrzaj=fresh.sadrzaj;renderFotografi();if(uid===selUid){renderCurrentView();toast('↺ Realtime ažuriranje')}}
+      }catch(e){console.warn('RT:',e.message)}
+    }
+  };
+  const hb=setInterval(()=>{
+    if(ws.readyState===WebSocket.OPEN)ws.send(JSON.stringify({topic:'phoenix',event:'heartbeat',payload:{},ref:null}));
+    else clearInterval(hb);
+  },30000);
+  ws.onerror=()=>rtSetStatus('err');
+  ws.onclose=()=>{clearInterval(hb);rtSetStatus('err');if(jwt)_rtRetry=setTimeout(startRealtime,5000)};
 }
-function startPolling(){
-  rtSetStatus('conn');
-  pollOnce();
-  _pollTimer=setInterval(pollOnce,POLL_INTERVAL);
-}
-function stopPolling(){clearInterval(_pollTimer);_pollTimer=null;rtSetStatus('off');}
+function stopRealtime(){clearTimeout(_rtRetry);if(_rtWs){try{_rtWs.close()}catch(_){}_rtWs=null}rtSetStatus('off')}
 
 async function refreshAll(){const ok=await loadAll();if(ok){renderFotografi();renderCurrentView();toast('Osvježeno ✓')}}
 
@@ -1706,7 +1740,7 @@ async function startApp(){
   const ok=await loadAll();
   if(ok){renderFotografi();renderCurrentView();
     if(myUid&&allRows.find(r=>r.user_id===myUid))selFotograf(myUid);
-    startPolling();
+    startRealtime();
   }
 }
 
