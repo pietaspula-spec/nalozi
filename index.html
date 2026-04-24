@@ -977,16 +977,27 @@ async function sbPatchPlan(uid,newPlan,opts={}){
     const fr = await sbFetchFresh(uid);
     const existingPlan = getPlan(fr.sadrzaj);
 
-    // Spoji: za svaki nalog u newPlan — preuzmi SAMO admin polja.
-    // Fotografova polja (stat, dt, note_foto, dt_kontakt, dt_obrada, dt_isporuka) ostaju sa servera.
-    const ADMIN_FIELDS_PATCH = ['sifra','ug','ime1','ime2','tel','adr','lat','lng','note_agencija','note','_adminTs'];
+    // Zajednička polja uređuju i admin i fotograf.
+    // Pobjeđuje novija izmjena: _adminTs vs _fotoTs.
+    const SHARED_SYNC_FIELDS = ['sifra','ug','ime1','ime2','tel','adr','lat','lng'];
+    // Admin-only polja ostaju u domeni agencije.
+    const ADMIN_ONLY_FIELDS_PATCH = ['note_agencija','note','_adminTs'];
     const existingMap = new Map(existingPlan.map(p=>[String(p.id),p]));
     const safePlan = newPlan.map(np => {
       const existing = existingMap.get(String(np.id));
       if(!existing) return np; // novi nalog od admina — prihvati u cijelosti
-      // Nalog postoji — preuzmi fotografova polja, zamijeni samo admin polja
+      // Nalog postoji — admin-only polja dolaze od admina, a zajednička polja
+      // bira novija izmjena između admina i fotografa.
       const merged = {...existing};
-      ADMIN_FIELDS_PATCH.forEach(f=>{ if(np[f]!==undefined) merged[f]=np[f]; });
+      ADMIN_ONLY_FIELDS_PATCH.forEach(f=>{ if(np[f]!==undefined) merged[f]=np[f]; });
+      const adminTs = np._adminTs || 0;
+      const fotoTs = existing._fotoTs || 0;
+      const adminWinsShared = adminTs >= fotoTs || (adminTs===0 && fotoTs===0);
+      SHARED_SYNC_FIELDS.forEach(f=>{
+        if(np[f]===undefined) return;
+        const existingEmpty = merged[f]===undefined || merged[f]===null || merged[f]==='';
+        if(adminWinsShared || existingEmpty) merged[f]=np[f];
+      });
       return merged;
     });
     // Kod klasičnog mergea zadrži server-stanje koje nije u newPlan.
@@ -1487,6 +1498,11 @@ function openNalog(planId){
     const row=getRowByUid(selUid);
     const item=getPlan(row?.sadrzaj).find(p=>String(p.id)===String(planId));
     if(!item){toast('Nalog nije pronađen',true);return}
+    if(item._fotoTs){
+      localStorage.setItem('nseen_'+item.id, String(item._fotoTs));
+      // Ukloni zelenu točku odmah nakon otvaranja naloga.
+      renderCurrentView();
+    }
     g('n-sifra').value=item.sifra||'';g('n-ug').value=item.ug||'';
     g('n-ime1').value=item.ime1||'';g('n-ime2').value=item.ime2||'';
     g('n-tel').value=item.tel||'';g('n-adr').value=item.adr||'';
@@ -1503,8 +1519,6 @@ function openNalog(planId){
       if(item.dt_isporuka)dtParts.push('📦 Isporučeno: '+fmtDS(item.dt_isporuka));
       g('n-foto-dates').textContent=dtParts.join('   ');
     }
-    // Označi kao viđeno
-    if(item._fotoTs)localStorage.setItem('nseen_'+item.id, item._fotoTs);
   }else{
     ['n-sifra','n-ug','n-ime1','n-ime2','n-tel','n-adr','n-lat','n-lng','n-note-ag'].forEach(id=>g(id).value='');
     g('n-foto-info').style.display='none';
@@ -1512,7 +1526,7 @@ function openNalog(planId){
   }
   g('nModal').classList.add('on');setTimeout(()=>g('n-sifra').focus(),60);
 }
-function closeNalog(){g('nModal').classList.remove('on');editPId=null}
+function closeNalog(){g('nModal').classList.remove('on');editPId=null;renderCurrentView()}
 
 async function saveNalog(){
   const targetUid=v('n-foto');if(!targetUid){toast('Odaberi fotografa!',true);return}
