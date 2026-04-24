@@ -964,12 +964,13 @@ async function sbFetchFresh(uid){
   const rows=await sbGet(`podaci?user_id=eq.${uid}&select=id,user_id,sadrzaj`);
   if(!rows||!rows.length)throw new Error(`Nema retka za user_id=${uid}`);return rows[0];
 }
-async function sbPatchPlan(uid,newPlan){
+async function sbPatchPlan(uid,newPlan,opts={}){
   // FIX-SYNC-A: TOCTOU zaštita — fetch → provjera → patch u jednoj atomičnoj sekvenci.
   // Ako FotoKalk napravi push između našeg fetcha i našeg patcha, sadrzaj koji smo
   // patchali izgubio bi fotografove podatke. Zato: fetch → merge admin polja → patch.
   // Ponavljamo do 3 puta ako sadrzaj u međuvremenu promijeni _seq (ili updated_at).
   const MAX_RETRY = 3;
+  const preserveMissing = opts.preserveMissing !== false;
   let attempt = 0;
   while(attempt < MAX_RETRY){
     attempt++;
@@ -978,7 +979,7 @@ async function sbPatchPlan(uid,newPlan){
 
     // Spoji: za svaki nalog u newPlan — preuzmi SAMO admin polja.
     // Fotografova polja (stat, dt, note_foto, dt_kontakt, dt_obrada, dt_isporuka) ostaju sa servera.
-    const ADMIN_FIELDS_PATCH = ['sifra','ug','ime1','ime2','tel','adr','lat','lng','note_agencija','_adminTs'];
+    const ADMIN_FIELDS_PATCH = ['sifra','ug','ime1','ime2','tel','adr','lat','lng','note_agencija','note','_adminTs'];
     const existingMap = new Map(existingPlan.map(p=>[String(p.id),p]));
     const safePlan = newPlan.map(np => {
       const existing = existingMap.get(String(np.id));
@@ -988,11 +989,14 @@ async function sbPatchPlan(uid,newPlan){
       ADMIN_FIELDS_PATCH.forEach(f=>{ if(np[f]!==undefined) merged[f]=np[f]; });
       return merged;
     });
-    // Dodaj naloge koji postoje na serveru a nisu u newPlan (fotograf ih je možda imao lokalno)
-    const newPlanIds = new Set(newPlan.map(p=>String(p.id)));
-    existingPlan.forEach(ep=>{
-      if(!newPlanIds.has(String(ep.id))) safePlan.push(ep);
-    });
+    // Kod klasičnog mergea zadrži server-stanje koje nije u newPlan.
+    // Kod eksplicitnog premještanja/uklanjanja to mora ostati isključeno.
+    if(preserveMissing){
+      const newPlanIds = new Set(newPlan.map(p=>String(p.id)));
+      existingPlan.forEach(ep=>{
+        if(!newPlanIds.has(String(ep.id))) safePlan.push(ep);
+      });
+    }
 
     const merged = {...fr.sadrzaj, a_plan: JSON.stringify(safePlan)};
     const res = await fetchWithTimeout(`${SB_URL}/rest/v1/podaci?user_id=eq.${uid}`,{
@@ -1545,12 +1549,12 @@ async function saveNalog(){
         _adminTs:Date.now()
       });
     }
-    await sbPatchPlan(targetUid,plan);
+    await sbPatchPlan(targetUid,plan,{preserveMissing:true});
     // Ako je nalog premješten drugom fotografu
     if(editPId&&targetUid!==selUid){
       const freshOld=await sbFetchFresh(selUid);
       const oldPlan=getPlan(freshOld.sadrzaj).filter(p=>String(p.id)!==String(editPId));
-      await sbPatchPlan(selUid,oldPlan);
+      await sbPatchPlan(selUid,oldPlan,{preserveMissing:false});
       selUid=targetUid;
       g('rpNm').textContent=getAutorIme(getRowByUid(targetUid)?.sadrzaj)||'—';
     }
