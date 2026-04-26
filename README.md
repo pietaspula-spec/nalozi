@@ -1,4 +1,4 @@
-# Adriatic Nalozi
+# NaloziAdriatic
 
 Admin aplikacija za upravljanje nalozima, obračunima i izvještajima za fotografe Adriatic.hr sustava.
 
@@ -128,4 +128,3 @@ IZMJENE.md
 ## Napomena o service workeru
 
 Trenutni `sw-nalozi.js` je minimalan i ne koristi istu cache strategiju kao FotoKalk. Ako budeš radio PWA promjene, dobro je dokumentaciju držati usklađenu sa stvarnim kodom.
-

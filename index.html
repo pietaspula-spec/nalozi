@@ -3,13 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Adriatic Nalozi v3.0</title>
+<title>NaloziAdriatic v3.0</title>
 <link rel="manifest" href="manifest-nalozi.json">
 <meta name="theme-color" content="#0b0c0e" id="themeColorMeta">
 <meta name="description" content="Upravljanje nalozima i obračunima — Adriatic.hr">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Adriatic Nalozi">
+<meta name="apple-mobile-web-app-title" content="NaloziAdriatic">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -330,7 +330,7 @@ textarea{resize:vertical;min-height:58px;font-size:.82rem;line-height:1.5}
 <!-- LOGIN -->
 <div id="loginScreen">
   <div class="lbox">
-    <div class="ll">📷 Adriatic Nalozi</div>
+<div class="ll">📷 NaloziAdriatic</div>
     <div class="ls">Upravljanje nalozima i obračunima — Adriatic.hr</div>
     <div class="lf"><label>E-mail</label>
       <input type="email" id="lEmail" placeholder="your@email.com" autocomplete="email"></div>
@@ -344,7 +344,7 @@ textarea{resize:vertical;min-height:58px;font-size:.82rem;line-height:1.5}
 <!-- APP -->
 <div id="app" style="display:none">
   <header>
-    <div class="hlogo">📷 Adriatic Nalozi <small>v3</small></div>
+<div class="hlogo">📷 NaloziAdriatic <small>v3</small></div>
     <div class="hright">
       <span class="rt-wrap" id="rtWrap"><span class="rt-dot" id="rtDot"></span><span id="rtLbl">—</span></span>
       <span class="sdot" id="sdot"></span>
@@ -427,7 +427,7 @@ textarea{resize:vertical;min-height:58px;font-size:.82rem;line-height:1.5}
           <div class="pf-r3">&nbsp;&nbsp;<b>Datum:</b><span class="pf-uline-short"></span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<b>mjesto:</b> <b id="pfMjesto"></b></div>
           <div class="pf-r4">&nbsp;&nbsp;<b>Potpis:</b><span class="pf-uline-long"></span></div>
         </div>
-        <div class="pf-app">Adriatic Nalozi · Generirano: <span id="pfDatum"></span></div>
+<div class="pf-app">NaloziAdriatic · Generirano: <span id="pfDatum"></span></div>
       </div>
     </div>
   </div>
@@ -912,7 +912,7 @@ function computeTax(bruto, taxCfg, bKmRaw, bOstaloRaw){
 
 // ── BACKUP ──
 function backupAll(){
-  const data={v:2,ts:Date.now(),app:'adriatic-nalozi',
+const data={v:2,ts:Date.now(),app:'naloziadriatic',
     kalk_cfg:localStorage.getItem(KALK_CFG_KEY)||'{}',
     obracuni:localStorage.getItem(OBRACUNI_KEY)||'{}',
     foto_tax:localStorage.getItem(FOTO_TAX_KEY)||'{}',
@@ -920,7 +920,7 @@ function backupAll(){
   const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);
   const d=new Date();
-  a.download=`adriatic_backup_${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}.json`;
+a.download=`naloziadriatic_backup_${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}.json`;
   a.click();URL.revokeObjectURL(a.href);toast('Backup preuzet ✓');
 }
 function importAll(e){
@@ -1531,7 +1531,7 @@ function printArchiveReport(){
       <div class="hd">
         <div class="hd-top">
           <div>
-            <div class="brand">Adriatic Nalozi</div>
+<div class="brand">NaloziAdriatic</div>
             <div class="sub">Arhivski mjesečni izvještaj za interne evidencije</div>
           </div>
           <div class="meta">
@@ -1712,7 +1712,7 @@ function exportExcel(){
   XLSX.utils.book_append_sheet(wb,ws1,'Po poslovima');
   XLSX.utils.book_append_sheet(wb,ws2,'Po mjesecima');
   const d=new Date();
-  XLSX.writeFile(wb,`adriatic_obracun_${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}.xlsx`);
+XLSX.writeFile(wb,`naloziadriatic_obracun_${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}.xlsx`);
   toast('Excel exportan ✓');
 }
 

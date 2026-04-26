@@ -1,4 +1,4 @@
-# Adriatic Nalozi - Technical Notes
+# NaloziAdriatic - Technical Notes
 
 Ovaj dokument je namijenjen programeru koji preuzima admin aplikaciju.
 

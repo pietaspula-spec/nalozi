@@ -1,4 +1,4 @@
-# Adriatic Nalozi - Testiranje
+# NaloziAdriatic - Testiranje
 
 Ovaj dokument sluzi kao checklist nakon svake vece izmjene.
 
