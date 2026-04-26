@@ -3,476 +3,479 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pomoć — Adriatic Nalozi</title>
+<title>Adriatic Nalozi — Pomoć</title>
 <style>
-:root {
-  --bg:#0b0c0e;--surf:#13151a;--surf2:#1a1d25;--surf3:#21252f;
-  --brd:#272b36;--brd2:#323848;
-  --acc:#f0c040;--acc2:#d4a030;
-  --grn:#34d399;--red:#f87171;--blu:#60a5fa;--pur:#a78bfa;
-  --txt:#e2e6f0;--mut:#636b80;--mut2:#8892a4;
-  --mono:ui-monospace,'Cascadia Code','Source Code Pro',monospace;
-  --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
-  --r:10px;
+:root{
+  --bg:#0b0c0e;
+  --surf:#13151a;
+  --surf2:#1a1d25;
+  --surf3:#21252f;
+  --brd:#272b36;
+  --brd2:#323848;
+  --acc:#f0c040;
+  --acc2:rgba(240,192,64,.12);
+  --txt:#e2e6f0;
+  --mut:#8892a4;
+  --mut2:#636b80;
+  --grn:#34d399;
+  --red:#f87171;
+  --blu:#60a5fa;
+  --pur:#a78bfa;
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth}
-body{background:var(--bg);color:var(--txt);font-family:var(--sans);line-height:1.6;min-height:100vh}
+body{background:var(--bg);color:var(--txt);font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;line-height:1.7;font-size:15px}
 
-/* ── HEADER ── */
-header{background:var(--surf);border-bottom:1px solid var(--brd);padding:14px 20px;position:sticky;top:0;z-index:100;display:flex;align-items:center;gap:12px}
-.hlogo{font-size:1rem;font-weight:800;color:var(--acc);letter-spacing:-.5px}
-.hlogo small{color:var(--mut2);font-weight:400;font-size:.73rem;margin-left:6px}
-.hback{margin-left:auto;background:transparent;border:1px solid var(--brd2);color:var(--mut2);font-family:var(--sans);font-size:.72rem;font-weight:700;padding:5px 12px;border-radius:6px;cursor:pointer;text-decoration:none;transition:all .18s}
-.hback:hover{border-color:var(--acc);color:var(--acc)}
+.hero{
+  padding:64px 24px 52px;
+  text-align:center;
+  background:radial-gradient(ellipse at 50% 0%, rgba(240,192,64,.13) 0%, transparent 65%);
+  border-bottom:1px solid var(--brd);
+}
+.hero-badge{
+  display:inline-block;
+  background:var(--acc2);
+  border:1px solid rgba(240,192,64,.3);
+  color:var(--acc);
+  font-size:.72rem;
+  font-weight:700;
+  letter-spacing:1.5px;
+  text-transform:uppercase;
+  padding:4px 12px;
+  border-radius:20px;
+  margin-bottom:18px;
+}
+.hero h1{font-size:clamp(2.2rem,6vw,3.4rem);font-weight:900;color:var(--acc);letter-spacing:-.02em;margin-bottom:12px;line-height:1.1}
+.hero p{max-width:640px;margin:0 auto;color:var(--mut);font-size:.95rem;line-height:1.65}
 
-/* ── LAYOUT ── */
-.wrap{max-width:740px;margin:0 auto;padding:32px 20px 80px}
+.layout{display:grid;grid-template-columns:220px 1fr;max-width:1080px;margin:0 auto;gap:0;padding:32px 24px 80px;align-items:start}
+.sidebar{position:sticky;top:24px;padding-right:28px}
+.toc-box{background:var(--surf);border:1px solid var(--brd);border-radius:12px;padding:18px 16px;overflow:hidden}
+.toc-box h2{font-size:.68rem;text-transform:uppercase;letter-spacing:2px;color:var(--acc);margin-bottom:12px}
+.toc-box a{display:flex;align-items:center;gap:8px;color:var(--mut);text-decoration:none;padding:6px 8px;border-radius:7px;font-size:.82rem;transition:all .15s}
+.toc-box a:hover{color:var(--acc);background:var(--acc2)}
+.toc-box a .ti{font-size:.9rem;width:20px;text-align:center;flex-shrink:0}
+.content{min-width:0}
 
-/* ── HERO ── */
-.hero{text-align:center;padding:40px 0 48px}
-.hero-icon{font-size:3rem;margin-bottom:12px}
-.hero h1{font-size:1.8rem;font-weight:800;letter-spacing:-.5px;margin-bottom:8px}
-.hero p{font-size:.9rem;color:var(--mut2);max-width:480px;margin:0 auto}
+.quick{display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:10px;margin-bottom:36px}
+.qcard{background:var(--surf);border:1px solid var(--brd);border-radius:11px;padding:15px 14px;transition:border-color .18s}
+.qcard:hover{border-color:var(--brd2)}
+.qcard .qi{font-size:1.5rem;margin-bottom:8px;display:block}
+.qcard h3{font-size:.83rem;font-weight:700;color:var(--txt);margin-bottom:4px}
+.qcard p{font-size:.76rem;color:var(--mut);line-height:1.5}
 
-/* ── NAV ── */
-.toc{background:var(--surf);border:1px solid var(--brd);border-radius:var(--r);padding:18px 20px;margin-bottom:36px}
-.toc-title{font-size:.6rem;font-weight:700;letter-spacing:1.8px;text-transform:uppercase;color:var(--mut2);margin-bottom:12px}
-.toc-list{display:flex;flex-direction:column;gap:4px}
-.toc-list a{color:var(--mut2);text-decoration:none;font-size:.83rem;padding:4px 0;display:flex;align-items:center;gap:8px;transition:color .15s}
-.toc-list a:hover{color:var(--acc)}
-.toc-list a::before{content:'';width:16px;height:1px;background:var(--brd2);flex-shrink:0;transition:background .15s}
-.toc-list a:hover::before{background:var(--acc)}
+.section{margin-top:44px}
+.section:first-child{margin-top:0}
+.sec-header{display:flex;align-items:center;gap:10px;padding-bottom:12px;border-bottom:1px solid var(--brd);margin-bottom:16px}
+.sec-icon{width:34px;height:34px;background:var(--acc2);border:1px solid rgba(240,192,64,.25);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0}
+.sec-header h2{font-size:1.05rem;font-weight:700;color:var(--txt)}
+.sec-intro{font-size:.86rem;color:var(--mut);margin-bottom:14px;line-height:1.6}
 
-/* ── SEKCIJA ── */
-.sec{margin-bottom:48px}
-.sec-hd{display:flex;align-items:center;gap:10px;margin-bottom:20px;padding-bottom:10px;border-bottom:1px solid var(--brd)}
-.sec-ico{font-size:1.3rem;flex-shrink:0}
-.sec-title{font-size:1.1rem;font-weight:700}
-.sec-num{font-family:var(--mono);font-size:.68rem;color:var(--acc);background:rgba(240,192,64,.12);border:1px solid rgba(240,192,64,.2);border-radius:4px;padding:1px 7px;flex-shrink:0}
+.fields{display:flex;flex-direction:column;gap:7px}
+.field{background:var(--surf);border:1px solid var(--brd);border-radius:9px;padding:13px 15px;transition:border-color .15s}
+.field:hover{border-color:var(--brd2)}
+.field-head{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.field-icon{font-size:.9rem;width:18px;text-align:center;flex-shrink:0}
+.field strong{font-size:.84rem;font-weight:700;color:var(--txt)}
+.field p{font-size:.79rem;color:var(--mut);line-height:1.55;padding-left:26px}
 
-/* ── KORAK ── */
+.note{border-radius:9px;padding:12px 15px;margin-top:10px;font-size:.8rem;color:var(--mut);line-height:1.55;display:flex;gap:10px;align-items:flex-start}
+.note-icon{flex-shrink:0;font-size:1rem;margin-top:.05rem}
+.note.info{background:rgba(96,165,250,.07);border:1px solid rgba(96,165,250,.2)}
+.note.ok{background:rgba(52,211,153,.07);border:1px solid rgba(52,211,153,.2)}
+.note.warn{background:rgba(248,113,113,.07);border:1px solid rgba(248,113,113,.2)}
+
+/* TAB INDICATOR */
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+.tab-pill{background:var(--surf3);border:1px solid var(--brd2);border-radius:6px;padding:5px 13px;font-size:.78rem;font-weight:700;color:var(--mut2)}
+.tab-pill.active{background:var(--acc2);border-color:rgba(240,192,64,.35);color:var(--acc)}
+
+/* INDICATOR ROW */
+.indicators{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:8px;margin:12px 0}
+.ind{background:var(--surf);border:1px solid var(--brd);border-radius:9px;padding:12px 14px;display:flex;align-items:flex-start;gap:10px}
+.ind-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-top:5px}
+.ind-dot.grn{background:var(--grn);box-shadow:0 0 6px rgba(52,211,153,.4)}
+.ind-dot.yel{background:var(--acc);box-shadow:0 0 6px rgba(240,192,64,.4)}
+.ind-dot.red{background:var(--red);box-shadow:0 0 6px rgba(248,113,113,.4)}
+.ind-dot.blu{background:var(--blu);box-shadow:0 0 6px rgba(96,165,250,.4)}
+.ind-body strong{font-size:.81rem;color:var(--txt);display:block;margin-bottom:2px}
+.ind-body p{font-size:.76rem;color:var(--mut);line-height:1.4}
+
+.workflow{background:var(--surf);border:1px solid var(--brd);border-radius:11px;padding:16px 18px;margin-bottom:14px}
+.workflow h4{font-size:.78rem;text-transform:uppercase;letter-spacing:1.4px;color:var(--acc);margin-bottom:12px}
 .steps{display:flex;flex-direction:column;gap:0}
-.step{display:flex;gap:14px;padding:14px 0;border-bottom:1px solid var(--brd)}
+.step{display:flex;gap:12px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--brd)}
 .step:last-child{border-bottom:none}
-.step-n{width:26px;height:26px;border-radius:50%;background:rgba(240,192,64,.12);border:1px solid rgba(240,192,64,.25);color:var(--acc);font-family:var(--mono);font-size:.72rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
-.step-body{}
-.step-title{font-size:.88rem;font-weight:700;margin-bottom:4px}
-.step-desc{font-size:.8rem;color:var(--mut2);line-height:1.6}
+.step-num{width:22px;height:22px;background:var(--acc);color:#000;font-size:.7rem;font-weight:900;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.step p{font-size:.8rem;color:var(--mut);line-height:1.5}
+.step strong{color:var(--txt)}
 
-/* ── POLJE ── */
-.fields{display:flex;flex-direction:column;gap:6px}
-.field{background:var(--surf2);border:1px solid var(--brd);border-radius:8px;padding:10px 13px;display:flex;align-items:flex-start;gap:10px}
-.field-ico{font-size:.95rem;flex-shrink:0;margin-top:1px}
-.field-nm{font-size:.82rem;font-weight:700;margin-bottom:2px}
-.field-desc{font-size:.76rem;color:var(--mut2);line-height:1.5}
-.field.locked{border-color:rgba(248,113,113,.2);background:rgba(248,113,113,.04)}
-.field.locked .field-nm{color:var(--red)}
-.badge{display:inline-flex;align-items:center;font-size:.62rem;font-weight:700;padding:1px 7px;border-radius:10px;margin-left:6px;vertical-align:middle}
-.b-foto{background:rgba(52,211,153,.12);color:var(--grn);border:1px solid rgba(52,211,153,.3)}
-.b-admin{background:rgba(240,192,64,.12);color:var(--acc);border:1px solid rgba(240,192,64,.25)}
-.b-lock{background:rgba(248,113,113,.1);color:var(--red);border:1px solid rgba(248,113,113,.25)}
+.tag{display:inline-block;font-size:.65rem;font-weight:800;letter-spacing:.8px;text-transform:uppercase;padding:2px 7px;border-radius:4px;vertical-align:middle;margin-left:6px}
+.tag.new{background:rgba(52,211,153,.15);color:var(--grn);border:1px solid rgba(52,211,153,.3)}
+.tag.tip{background:rgba(96,165,250,.12);color:var(--blu);border:1px solid rgba(96,165,250,.25)}
 
-/* ── STATUS BADGE ── */
-.statuses{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
-.sb{border-radius:8px;padding:10px 14px;flex:1;min-width:140px}
-.sb-lbl{font-size:.68rem;font-weight:700;padding:2px 8px;border-radius:20px;border:1px solid;display:inline-block;margin-bottom:6px}
-.sb-desc{font-size:.75rem;color:var(--mut2);line-height:1.5}
-.sb.ceka .sb-lbl{background:rgba(240,192,64,.12);color:var(--acc);border-color:rgba(240,192,64,.3)}
-.sb.ceka{background:rgba(240,192,64,.04);border:1px solid rgba(240,192,64,.15)}
-.sb.obav .sb-lbl{background:rgba(52,211,153,.12);color:var(--grn);border-color:rgba(52,211,153,.3)}
-.sb.obav{background:rgba(52,211,153,.04);border:1px solid rgba(52,211,153,.15)}
-.sb.otk .sb-lbl{background:rgba(248,113,113,.1);color:var(--red);border-color:rgba(248,113,113,.3)}
-.sb.otk{background:rgba(248,113,113,.04);border:1px solid rgba(248,113,113,.15)}
-.sb.nodt .sb-lbl{background:rgba(99,107,128,.1);color:var(--mut2);border-color:rgba(99,107,128,.3)}
-.sb.nodt{background:rgba(99,107,128,.04);border:1px solid rgba(99,107,128,.15)}
+code{font-family:ui-monospace,'Cascadia Code',monospace;background:var(--surf3);border:1px solid var(--brd2);padding:1px 6px;border-radius:4px;font-size:.8rem;color:var(--acc)}
 
-/* ── INFO / WARN BOX ── */
-.ib{background:rgba(96,165,250,.07);border:1px solid rgba(96,165,250,.2);border-radius:8px;padding:10px 14px;font-size:.78rem;color:var(--blu);line-height:1.6;margin-top:10px}
-.wb{background:rgba(248,113,113,.07);border:1px solid rgba(248,113,113,.2);border-radius:8px;padding:10px 14px;font-size:.78rem;color:var(--red);line-height:1.6;margin-top:10px}
-.gb{background:rgba(52,211,153,.07);border:1px solid rgba(52,211,153,.2);border-radius:8px;padding:10px 14px;font-size:.78rem;color:var(--grn);line-height:1.6;margin-top:10px}
+footer{text-align:center;padding:28px 24px;border-top:1px solid var(--brd);color:var(--mut2);font-size:.72rem}
 
-/* ── UI PRIKAZ ── */
-.ui-box{background:var(--surf2);border:1px solid var(--brd);border-radius:var(--r);padding:16px;margin-top:10px;font-size:.78rem}
-.ui-row{display:flex;gap:8px;align-items:flex-start;margin-bottom:8px}
-.ui-row:last-child{margin-bottom:0}
-.ui-tag{background:var(--surf3);border:1px solid var(--brd2);border-radius:4px;font-family:var(--mono);font-size:.68rem;color:var(--acc);padding:2px 7px;flex-shrink:0;white-space:nowrap}
-.ui-desc{color:var(--mut2);line-height:1.5}
-
-/* ── SEPARATOR ── */
-.sep{border:none;border-top:1px solid var(--brd);margin:40px 0}
-
-@media(max-width:600px){
-  .hero h1{font-size:1.4rem}
-  .statuses{flex-direction:column}
-  .sb{min-width:unset}
+@media(max-width:720px){
+  .layout{grid-template-columns:1fr;padding:24px 16px 60px}
+  .sidebar{display:none}
+  .hero{padding:48px 18px 38px}
+  .quick{grid-template-columns:repeat(2,1fr)}
 }
 </style>
 </head>
 <body>
 
-<header>
-  <div class="hlogo">📷 Adriatic Nalozi <small>pomoć</small></div>
-  <a class="hback" href="index.html">← Natrag na app</a>
-</header>
+<div class="hero">
+  <div class="hero-badge">Admin dokumentacija</div>
+  <h1>Adriatic Nalozi</h1>
+  <p>Kompletne upute za admin aplikaciju: prijava, pregled fotografa, upravljanje nalozima, obračuni, izvještaji, realtime i postavke.</p>
+</div>
 
-<div class="wrap">
+<div class="layout">
 
-  <div class="hero">
-    <div class="hero-icon">📋</div>
-    <h1>Upute za korištenje</h1>
-    <p>Sve što trebaš znati za upravljanje nalozima snimanja — od prijave do dodjele fotografu.</p>
-  </div>
-
-  <!-- TOC -->
-  <div class="toc">
-    <div class="toc-title">Sadržaj</div>
-    <div class="toc-list">
-      <a href="#prijava">Prijava i odjava</a>
-      <a href="#pregled">Pregled fotografa i naloga</a>
-      <a href="#novi-nalog">Dodavanje novog naloga</a>
-      <a href="#uredivanje">Uređivanje naloga</a>
-      <a href="#statusi">Statusi naloga</a>
-      <a href="#polja">Polja naloga — što tko mijenja</a>
-      <a href="#realtime">Sinkronizacija u realnom vremenu</a>
-      <a href="#osvjezi">Ručno osvježavanje</a>
-      <a href="#pwa">Instalacija na uređaj</a>
+  <aside class="sidebar">
+    <div class="toc-box">
+      <h2>Sadržaj</h2>
+      <a href="#prijava"><span class="ti">🔑</span> Prijava i sigurnost</a>
+      <a href="#pregled"><span class="ti">🖥</span> Pregled i navigacija</a>
+      <a href="#nalozi"><span class="ti">📋</span> Nalozi</a>
+      <a href="#obracun"><span class="ti">💶</span> Obračun</a>
+      <a href="#izvjestaji"><span class="ti">📊</span> Izvještaji</a>
+      <a href="#realtime"><span class="ti">📡</span> Realtime</a>
+      <a href="#postavke"><span class="ti">⚙️</span> Postavke i backup</a>
+      <a href="#pwa"><span class="ti">📱</span> PWA</a>
+      <a href="#novosti"><span class="ti">✨</span> Novosti</a>
     </div>
-  </div>
+  </aside>
 
-  <!-- 1. PRIJAVA -->
-  <div class="sec" id="prijava">
-    <div class="sec-hd">
-      <span class="sec-num">01</span>
-      <span class="sec-ico">🔐</span>
-      <span class="sec-title">Prijava i odjava</span>
-    </div>
-    <div class="steps">
-      <div class="step">
-        <div class="step-n">1</div>
-        <div class="step-body">
-          <div class="step-title">Unesi e-mail i lozinku</div>
-          <div class="step-desc">Koristi admin podatke za prijavu. Aplikacija ne prihvaća prijavu fotografa — samo korisnici koji su evidentirani kao admini mogu pristupiti.</div>
-        </div>
+  <main class="content">
+
+    <div class="quick">
+      <div class="qcard">
+        <span class="qi">🛡</span>
+        <h3>Admin pristup</h3>
+        <p>Nije dovoljna samo Supabase prijava — korisnik mora biti upisan i u tablicu <code>admins</code>.</p>
       </div>
-      <div class="step">
-        <div class="step-n">2</div>
-        <div class="step-body">
-          <div class="step-title">Prijava se pamti</div>
-          <div class="step-desc">Token se sprema lokalno — pri sljedećem otvaranju app automatski ulazi bez ponovne prijave, sve dok se ne odjaviš ili ne istekne sesija.</div>
-        </div>
+      <div class="qcard">
+        <span class="qi">📡</span>
+        <h3>Realtime</h3>
+        <p>Promjene fotografa dolaze automatski. Ručni <code>↺ Osvježi</code> dostupan je kao fallback.</p>
       </div>
-      <div class="step">
-        <div class="step-n">3</div>
-        <div class="step-body">
-          <div class="step-title">Odjava</div>
-          <div class="step-desc">Gumb <strong>Odjava</strong> u gornjem desnom kutu. Potvrdi dijalogom — lokalni podaci se brišu s uređaja.</div>
-        </div>
+      <div class="qcard">
+        <span class="qi">💶</span>
+        <h3>Obračun</h3>
+        <p>Za obavljene i otkazane naloge: troškovi, verifikacija i porezni izračun po fotografu.</p>
+      </div>
+      <div class="qcard">
+        <span class="qi">📊</span>
+        <h3>Izvještaji</h3>
+        <p>Pregled po mjesecima, Excel export, Print/PDF i Batch print za više fotografa odjednom.</p>
       </div>
     </div>
-    <div class="wb">⚠️ Ne dijeli admin pristup s fotografima. Svaki fotograf ima vlastiti korisnički račun kroz FotoKalk PRO aplikaciju.</div>
-  </div>
 
-  <hr class="sep">
+    <!-- 1. PRIJAVA -->
+    <div class="section" id="prijava">
+      <div class="sec-header">
+        <div class="sec-icon">🔑</div>
+        <h2>1. Prijava i sigurnost</h2>
+      </div>
+      <p class="sec-intro">Adriatic Nalozi je admin alat. Dvostruka provjera — Supabase Auth + admin tablica — sprečava da fotografi slučajno dobiju pristup.</p>
 
-  <!-- 2. PREGLED -->
-  <div class="sec" id="pregled">
-    <div class="sec-hd">
-      <span class="sec-num">02</span>
-      <span class="sec-ico">👁</span>
-      <span class="sec-title">Pregled fotografa i naloga</span>
-    </div>
-    <p style="font-size:.83rem;color:var(--mut2);margin-bottom:16px">Sučelje je podijeljeno na dva panela.</p>
-    <div class="ui-box">
-      <div class="ui-row">
-        <span class="ui-tag">Lijevi panel</span>
-        <span class="ui-desc">Lista svih fotografa. Prikazuje broj naloga i oznaku koliko ih čeka na obradu. Klikni na fotografa da vidiš njegove naloge.</span>
-      </div>
-      <div class="ui-row">
-        <span class="ui-tag">Desni panel</span>
-        <span class="ui-desc">Nalozi odabranog fotografa, sortirani po datumu snimanja (bez datuma padaju na dno).</span>
-      </div>
-      <div class="ui-row">
-        <span class="ui-tag">🔍 Pretraga</span>
-        <span class="ui-desc">Pretraži fotografa po imenu ili dijelu UUID-a — korisno kad imaš više fotografa.</span>
-      </div>
-      <div class="ui-row">
-        <span class="ui-tag">Filteri</span>
-        <span class="ui-desc"><strong>Na čekanju</strong> (default) · <strong>Svi</strong> · <strong>Obavljeno</strong> · <strong>Otkazano</strong> — filtriraju prikaz naloga desnog panela.</span>
-      </div>
-    </div>
-    <div class="ib">ℹ️ Broj u žutom krugu pored fotografa = nalozi na čekanju. Zeleni krug s ✓ = svi nalozi obavljeni.</div>
-  </div>
-
-  <hr class="sep">
-
-  <!-- 3. NOVI NALOG -->
-  <div class="sec" id="novi-nalog">
-    <div class="sec-hd">
-      <span class="sec-num">03</span>
-      <span class="sec-ico">➕</span>
-      <span class="sec-title">Dodavanje novog naloga</span>
-    </div>
-    <div class="steps">
-      <div class="step">
-        <div class="step-n">1</div>
-        <div class="step-body">
-          <div class="step-title">Odaberi fotografa</div>
-          <div class="step-desc">Klikni na fotografa u lijevom panelu. Gumb <strong>+ Novi nalog</strong> postaje aktivan tek nakon odabira.</div>
+      <div class="workflow">
+        <h4>Tijek prijave</h4>
+        <div class="steps">
+          <div class="step"><div class="step-num">1</div><p>Unesi <strong>e-mail i lozinku</strong> na login ekranu.</p></div>
+          <div class="step"><div class="step-num">2</div><p>Supabase Auth provjerava vjerodajnice i vraća JWT token.</p></div>
+          <div class="step"><div class="step-num">3</div><p>Aplikacija dodatno provjerava tablicu <strong><code>admins</code></strong> — ako korisnik nije tamo, pristup se odmah odbija.</p></div>
         </div>
       </div>
-      <div class="step">
-        <div class="step-n">2</div>
-        <div class="step-body">
-          <div class="step-title">Klikni + Novi nalog</div>
-          <div class="step-desc">Otvara se forma. U padajućem izborniku <strong>Dodijeli fotografu</strong> možeš promijeniti fotografa i nalog dodijeliti drugome.</div>
+
+      <div class="fields">
+        <div class="field">
+          <div class="field-head"><span class="field-icon">✅</span><strong>Uspješna prijava</strong></div>
+          <p>JWT token se sprema lokalno i učitava se pri svakom idućem otvaranju aplikacije.</p>
         </div>
-      </div>
-      <div class="step">
-        <div class="step-n">3</div>
-        <div class="step-body">
-          <div class="step-title">Popuni podatke</div>
-          <div class="step-desc">Šifra objekta, broj ugovora, ime i prezime vlasnika, telefon, adresa, GPS koordinate i napomena. Datum snimanja i status <strong>ne unosiš ti</strong> — to postavlja fotograf.</div>
+        <div class="field">
+          <div class="field-head"><span class="field-icon">🚫</span><strong>Pristup odbijen</strong></div>
+          <p>Ako korisnik nije u <code>admins</code> tablici, aplikacija ostaje na login ekranu bez ikakve veze prema ostatku sučelja.</p>
         </div>
-      </div>
-      <div class="step">
-        <div class="step-n">4</div>
-        <div class="step-body">
-          <div class="step-title">Spremi nalog</div>
-          <div class="step-desc">Klikni <strong>💾 Spremi nalog</strong>. Podaci se odmah šalju na server i postaju vidljivi fotografu u FotoKalk PRO aplikaciji.</div>
+        <div class="field">
+          <div class="field-head"><span class="field-icon">🚪</span><strong>Odjava</strong></div>
+          <p>Ruši JWT iz localStoragea, gasi realtime kanal i vraća login ekran. Nalazi se u headeru.</p>
         </div>
       </div>
     </div>
-    <div class="gb">✓ Novi nalog automatski dobiva status <strong>Na čekanju</strong> i čeka da fotograf postavi datum snimanja.</div>
-  </div>
 
-  <hr class="sep">
+    <!-- 2. PREGLED -->
+    <div class="section" id="pregled">
+      <div class="sec-header">
+        <div class="sec-icon">🖥</div>
+        <h2>2. Pregled i navigacija</h2>
+      </div>
+      <p class="sec-intro">Sučelje je podijeljeno na lijevi panel s fotografima i desni radni panel s tri taba.</p>
 
-  <!-- 4. UREĐIVANJE -->
-  <div class="sec" id="uredivanje">
-    <div class="sec-hd">
-      <span class="sec-num">04</span>
-      <span class="sec-ico">✏️</span>
-      <span class="sec-title">Uređivanje naloga</span>
-    </div>
-    <div class="steps">
-      <div class="step">
-        <div class="step-n">1</div>
-        <div class="step-body">
-          <div class="step-title">Klikni ✏️ Uredi na kartici naloga</div>
-          <div class="step-desc">Svaka kartica naloga ima gumb <strong>✏️ Uredi</strong> u donjem desnom kutu.</div>
+      <div class="fields">
+        <div class="field">
+          <div class="field-head"><span class="field-icon">👤</span><strong>Lijevi panel — fotografe</strong></div>
+          <p>Popis svih fotografa s pretraživanjem. Badge na svakom imenu pokazuje broj aktivnih naloga.</p>
+        </div>
+        <div class="field">
+          <div class="field-head"><span class="field-icon">📂</span><strong>Desni panel — tri taba</strong></div>
+          <p>Nakon odabira fotografa desno se aktiviraju tabovi:</p>
         </div>
       </div>
-      <div class="step">
-        <div class="step-n">2</div>
-        <div class="step-body">
-          <div class="step-title">Izmijeni podatke</div>
-          <div class="step-desc">Možeš mijenjati sve admin podatke. Fotografu možeš i promijeniti dodjelu — odaberi drugog fotografa iz padajućeg izbornika i nalog će se premjestiti.</div>
-        </div>
-      </div>
-      <div class="step">
-        <div class="step-n">3</div>
-        <div class="step-body">
-          <div class="step-title">Spremi</div>
-          <div class="step-desc">Kod spremanja aplikacija uvijek prvo povuče svježe podatke s baze, zatim spoji promjene — fotografovi datum i status ostaju netaknuti.</div>
-        </div>
-      </div>
-    </div>
-    <div class="ib">ℹ️ Ako je fotograf u međuvremenu promijenio status ili datum, te promjene neće biti pregažene. Svaka strana mijenja isključivo svoja polja.</div>
-  </div>
 
-  <hr class="sep">
+      <div class="tabs">
+        <div class="tab-pill active">📋 Nalozi</div>
+        <div class="tab-pill active">💶 Obračun</div>
+        <div class="tab-pill active">📊 Izvještaji</div>
+      </div>
 
-  <!-- 5. STATUSI -->
-  <div class="sec" id="statusi">
-    <div class="sec-hd">
-      <span class="sec-num">05</span>
-      <span class="sec-ico">🏷</span>
-      <span class="sec-title">Statusi naloga</span>
-    </div>
-    <p style="font-size:.83rem;color:var(--mut2);margin-bottom:14px">Status postavlja isključivo fotograf kroz svoju aplikaciju. Admin ga vidi, ali ne može mijenjati.</p>
-    <div class="statuses">
-      <div class="sb ceka">
-        <span class="sb-lbl">Na čekanju</span>
-        <div class="sb-desc">Nalog primljen, fotograf još nije postavio datum snimanja.</div>
-      </div>
-      <div class="sb nodt">
-        <span class="sb-lbl">Čeka datum fotografa</span>
-        <div class="sb-desc">Fotograf je prihvatio nalog ali datum snimanja još nije dogovoren.</div>
-      </div>
-      <div class="sb obav">
-        <span class="sb-lbl">Obavljeno</span>
-        <div class="sb-desc">Snimanje je obavljeno. Fotograf je označio kao završeno.</div>
-      </div>
-      <div class="sb otk">
-        <span class="sb-lbl">Otkazano</span>
-        <div class="sb-desc">Nalog je otkazan. Prigušen prikaz na kartici.</div>
-      </div>
-    </div>
-    <div class="wb" style="margin-top:14px">🔒 Status mijenja fotograf — prikazano je zaključano na svakoj kartici naloga.</div>
-  </div>
-
-  <hr class="sep">
-
-  <!-- 6. POLJA -->
-  <div class="sec" id="polja">
-    <div class="sec-hd">
-      <span class="sec-num">06</span>
-      <span class="sec-ico">📝</span>
-      <span class="sec-title">Polja naloga — što tko mijenja</span>
-    </div>
-    <div class="fields">
-      <div class="field">
-        <div class="field-ico">🔑</div>
-        <div>
-          <div class="field-nm">Šifra objekta <span class="badge b-admin">admin</span></div>
-          <div class="field-desc">Interni kod objekta, npr. HR-12345. Prikazuje se istaknuto na kartici.</div>
+      <div class="fields">
+        <div class="field">
+          <div class="field-head"><span class="field-icon">🔍</span><strong>Filteri naloga</strong></div>
+          <p>U tabu Nalozi: <strong>Na čekanju</strong> / <strong>Svi</strong> / <strong>Obavljeno</strong> / <strong>Otkazano</strong>.</p>
         </div>
-      </div>
-      <div class="field">
-        <div class="field-ico">📄</div>
-        <div>
-          <div class="field-nm">Broj ugovora <span class="badge b-admin">admin</span></div>
-          <div class="field-desc">Referenca na ugovor, npr. 1191/2026.</div>
-        </div>
-      </div>
-      <div class="field">
-        <div class="field-ico">👤</div>
-        <div>
-          <div class="field-nm">Ime i prezime vlasnika <span class="badge b-admin">admin</span></div>
-          <div class="field-desc">Kontakt osoba za snimanje.</div>
-        </div>
-      </div>
-      <div class="field">
-        <div class="field-ico">📞</div>
-        <div>
-          <div class="field-nm">Telefon <span class="badge b-admin">admin</span></div>
-          <div class="field-desc">Klikabilan broj na kartici — fotograf može direktno nazvati.</div>
-        </div>
-      </div>
-      <div class="field">
-        <div class="field-ico">📍</div>
-        <div>
-          <div class="field-nm">Adresa objekta <span class="badge b-admin">admin</span></div>
-          <div class="field-desc">Otvara Google Maps link na kartici naloga.</div>
-        </div>
-      </div>
-      <div class="field">
-        <div class="field-ico">🗺</div>
-        <div>
-          <div class="field-nm">GPS koordinate <span class="badge b-admin">admin</span></div>
-          <div class="field-desc">Latitude i longitude. Ako su unesene, Google Maps link koristi koordinate umjesto adrese — preciznije za objekte izvan naselja.</div>
-        </div>
-      </div>
-      <div class="field">
-        <div class="field-ico">📝</div>
-        <div>
-          <div class="field-nm">Napomena <span class="badge b-admin">admin</span></div>
-          <div class="field-desc">Posebne upute: pristup, ključevi, parking, specifični zahtjevi snimanja.</div>
-        </div>
-      </div>
-      <div class="field locked">
-        <div class="field-ico">📅</div>
-        <div>
-          <div class="field-nm">Datum snimanja <span class="badge b-lock">🔒 fotograf</span></div>
-          <div class="field-desc">Fotograf postavlja datum nakon dogovora s vlasnikom. Admin ne može mijenjati.</div>
-        </div>
-      </div>
-      <div class="field locked">
-        <div class="field-ico">🏷</div>
-        <div>
-          <div class="field-nm">Status <span class="badge b-lock">🔒 fotograf</span></div>
-          <div class="field-desc">Na čekanju / Obavljeno / Otkazano — isključivo u nadležnosti fotografa.</div>
+        <div class="field">
+          <div class="field-head"><span class="field-icon">🌙</span><strong>Tema</strong></div>
+          <p>Toggle u headeru prebacuje između tamne i svijetle teme — postavka se pamti lokalno.</p>
         </div>
       </div>
     </div>
-  </div>
 
-  <hr class="sep">
-
-  <!-- 7. REALTIME -->
-  <div class="sec" id="realtime">
-    <div class="sec-hd">
-      <span class="sec-num">07</span>
-      <span class="sec-ico">⚡</span>
-      <span class="sec-title">Sinkronizacija u realnom vremenu</span>
-    </div>
-    <p style="font-size:.83rem;color:var(--mut2);margin-bottom:16px">Aplikacija je stalno spojena na bazu putem WebSocket veze — promjene fotografa vidljive su odmah, bez osvježavanja stranice.</p>
-    <div class="ui-box">
-      <div class="ui-row">
-        <span class="ui-tag">● LIVE</span>
-        <span class="ui-desc">Zeleni pulsirajući indikator u gornjem desnom kutu — WebSocket veza je aktivna. Promjene fotografa stižu automatski.</span>
+    <!-- 3. NALOZI -->
+    <div class="section" id="nalozi">
+      <div class="sec-header">
+        <div class="sec-icon">📋</div>
+        <h2>3. Nalozi</h2>
       </div>
-      <div class="ui-row">
-        <span class="ui-tag">● Spajanje…</span>
-        <span class="ui-desc">Aplikacija uspostavlja vezu. Normalno traje nekoliko sekundi pri pokretanju ili nakon prekida.</span>
-      </div>
-      <div class="ui-row">
-        <span class="ui-tag">● Greška</span>
-        <span class="ui-desc">Veza je prekinuta — aplikacija automatski pokušava ponovo svakih 5 sekundi. Korisiti gumb Osvježi za ručnu provjeru.</span>
-      </div>
-    </div>
-    <div class="gb">✓ Kad fotograf klikne "Fotografirano" ili postavi datum, kartica naloga se ažurira na tvom ekranu u trenutku — bez ikakvog klika.</div>
-    <div class="ib" style="margin-top:10px">ℹ️ Uz indikator veze postoji i statusni dot (desno od LIVE oznake) koji prikazuje stanje zadnje operacije upisa: zeleno = uspjeh, žuto = u tijeku, crveno = greška.</div>
-  </div>
+      <p class="sec-intro">Kreiranje i uređivanje zadataka za fotografe. Gumb "Novi nalog" aktivan je tek nakon odabira fotografa.</p>
 
-  <hr class="sep">
-
-  <!-- 7b. OSVJEŽI -->
-  <div class="sec" id="osvjezi">
-    <div class="sec-hd">
-      <span class="sec-num">07b</span>
-      <span class="sec-ico">↺</span>
-      <span class="sec-title">Ručno osvježavanje</span>
-    </div>
-    <p style="font-size:.83rem;color:var(--mut2);margin-bottom:16px">Uz automatski Realtime, uvijek možeš ručno povući svježe podatke.</p>
-    <div class="ui-box">
-      <div class="ui-row">
-        <span class="ui-tag">↺ Osvježi</span>
-        <span class="ui-desc">Gumb u gornjem desnom kutu. Povlači svježe podatke svih fotografa s baze i ažurira oba panela — korisno ako sumnjаš da Realtime veza nije radila.</span>
-      </div>
-    </div>
-    <div class="ib">ℹ️ Osvježi uvijek radi neovisno o statusu Realtime veze — pouzdano kao rezervna opcija.</div>
-  </div>
-
-
-  <hr class="sep">
-
-  <!-- 8. PWA -->
-  <div class="sec" id="pwa">
-    <div class="sec-hd">
-      <span class="sec-num">08</span>
-      <span class="sec-ico">📲</span>
-      <span class="sec-title">Instalacija na uređaj</span>
-    </div>
-    <p style="font-size:.83rem;color:var(--mut2);margin-bottom:16px">Aplikacija se može instalirati kao PWA — radi kao nativna app bez browserske trake.</p>
-    <div class="steps">
-      <div class="step">
-        <div class="step-n">🤖</div>
-        <div class="step-body">
-          <div class="step-title">Android / Chrome</div>
-          <div class="step-desc">Otvori aplikaciju u Chromeu → tri točkice (⋮) → <strong>Dodaj na početni zaslon</strong> → Instaliraj.</div>
+      <div class="fields">
+        <div class="field">
+          <div class="field-head"><span class="field-icon">📝</span><strong>Admin polja</strong></div>
+          <p>Šifra objekta, broj ugovora, vlasnik, telefon, adresa, GPS, broj smještajnih jedinica, link i napomena agencije.</p>
+        </div>
+        <div class="field">
+          <div class="field-head"><span class="field-icon">🔄</span><strong>Merge logika</strong></div>
+          <p>Admin i fotograf dijele isti zapis kroz merge — adminova poslovna polja i fotografova statusna/terenska polja ne pregaze jedna drugu.</p>
+        </div>
+        <div class="field">
+          <div class="field-head"><span class="field-icon">🔀</span><strong>Premještanje naloga</strong></div>
+          <p>Pri uređivanju nalog možeš prebaciti drugom fotografu bez ručnog kopiranja podataka.</p>
+        </div>
+        <div class="field">
+          <div class="field-head"><span class="field-icon">👁</span><strong>Foto podaci</strong></div>
+          <p>Admin vidi fotografova polja (datum kontaktiranja, obrada, isporuka) na kartici naloga — samo za čitanje.</p>
         </div>
       </div>
-      <div class="step">
-        <div class="step-n">🍎</div>
-        <div class="step-body">
-          <div class="step-title">iPhone / iPad — Safari</div>
-          <div class="step-desc">Otvori u Safariju → ikona <strong>↑ Dijeli</strong> → <strong>Dodaj na početni zaslon</strong> → Dodaj.</div>
+
+      <div class="note info">
+        <span class="note-icon">💡</span>
+        <span>Kad fotograf promijeni status, datum ili komentar, admin to vidi u realnom vremenu kroz Realtime kanal — bez ručnog refresha.</span>
+      </div>
+    </div>
+
+    <!-- 4. OBRAČUN -->
+    <div class="section" id="obracun">
+      <div class="sec-header">
+        <div class="sec-icon">💶</div>
+        <h2>4. Obračun <span class="tag new">Ključno</span></h2>
+      </div>
+      <p class="sec-intro">Najjači dio aplikacije — financijski obračun za svaki završeni ili otkazani nalog s live kalkulacijom po fotografu.</p>
+
+      <div class="fields">
+        <div class="field">
+          <div class="field-head"><span class="field-icon">🎯</span><strong>Kada se koristi</strong></div>
+          <p>Dostupan samo za <strong>obavljene</strong> i <strong>otkazane</strong> naloge. Kartica naloga pokazuje je li obračun već unesen.</p>
+        </div>
+        <div class="field">
+          <div class="field-head"><span class="field-icon">📝</span><strong>Polja obračuna</strong></div>
+          <p>Datum kontaktiranja, datum isporuke, tko je dogovorio posao, broj kategorija, kilometri, dron, akvizicija, otkaz, ostali troškovi i verifikacija.</p>
+        </div>
+        <div class="field">
+          <div class="field-head"><span class="field-icon">❌</span><strong>Slučaj otkaza</strong></div>
+          <p>Kad je označen otkaz, kategorije i dron se automatski gase — obračun ide kroz putni trošak i propuštenu dobit.</p>
+        </div>
+        <div class="field">
+          <div class="field-head"><span class="field-icon">💰</span><strong>Live kalkulacija</strong></div>
+          <p>Modal odmah prikazuje <strong>bruto honorar</strong>, <strong>bruto isplatu</strong>, <strong>bruto + ZO</strong> i <strong>neto</strong> prema naknadama i poreznim postavkama tog fotografa.</p>
         </div>
       </div>
-      <div class="step">
-        <div class="step-n">💻</div>
-        <div class="step-body">
-          <div class="step-title">Desktop — Chrome / Edge</div>
-          <div class="step-desc">U adresnoj traci pojavljuje se ikona instalacije (⊕) s desne strane → klikni → Instaliraj.</div>
+
+      <div class="note info">
+        <span class="note-icon">💡</span>
+        <span>Svaki fotograf može imati drugačije porezne postavke (OIB, grad, status, paušal, MIO, ZO, porez). Provjeri da su unesene za sve fotografe u Postavkama.</span>
+      </div>
+    </div>
+
+    <!-- 5. IZVJEŠTAJI -->
+    <div class="section" id="izvjestaji">
+      <div class="sec-header">
+        <div class="sec-icon">📊</div>
+        <h2>5. Izvještaji</h2>
+      </div>
+      <p class="sec-intro">Pregled obračunskih podataka po vremenu i fotografima s više opcija izvoza.</p>
+
+      <div class="fields">
+        <div class="field">
+          <div class="field-head"><span class="field-icon">📅</span><strong>Pregled po mjesecima</strong></div>
+          <p>Obračuni grupirani po mjesecu i fotografu, s jasno odvojenim bruto i neto iznosima.</p>
+        </div>
+        <div class="field">
+          <div class="field-head"><span class="field-icon">📊</span><strong>Excel export</strong></div>
+          <p>Generira worksheet po poslovima i sažetak po mjesecima u jednoj <code>.xlsx</code> datoteci.</p>
+        </div>
+        <div class="field">
+          <div class="field-head"><span class="field-icon">🖨</span><strong>Print / PDF</strong></div>
+          <p>Strukturirani obračunski ispis spreman za print ili pretvaranje u PDF iz preglednika.</p>
+        </div>
+        <div class="field">
+          <div class="field-head"><span class="field-icon">📦</span><strong>Batch print</strong></div>
+          <p>Otvara ispis za više fotografa zaredom — korisno pri većem obračunskom ciklusu krajem mjeseca.</p>
         </div>
       </div>
     </div>
-    <div class="gb">✓ Nakon instalacije aplikacija se otvara u punom ekranu bez browser sučelja i dostupna je direktno s početnog zaslona.</div>
-  </div>
 
-</div><!-- /wrap -->
+    <!-- 6. REALTIME -->
+    <div class="section" id="realtime">
+      <div class="sec-header">
+        <div class="sec-icon">📡</div>
+        <h2>6. Realtime i osvježavanje</h2>
+      </div>
+      <p class="sec-intro">Aplikacija drži otvorenu WebSocket vezu prema Supabase realtime kanalu i prikazuje promjene fotografa čim se dogode.</p>
 
+      <div class="indicators">
+        <div class="ind">
+          <div class="ind-dot grn"></div>
+          <div class="ind-body"><strong>LIVE</strong><p>Veza aktivna, promjene dolaze automatski.</p></div>
+        </div>
+        <div class="ind">
+          <div class="ind-dot yel"></div>
+          <div class="ind-body"><strong>Spajanje…</strong><p>WebSocket se uspostavlja, čekaj kratko.</p></div>
+        </div>
+        <div class="ind">
+          <div class="ind-dot red"></div>
+          <div class="ind-body"><strong>Greška veze</strong><p>Realtime pao — koristi ručni refresh.</p></div>
+        </div>
+        <div class="ind">
+          <div class="ind-dot blu"></div>
+          <div class="ind-body"><strong>Operacija u tijeku</strong><p>Upis se šalje na server, čekaj potvrdu.</p></div>
+        </div>
+      </div>
+
+      <div class="fields">
+        <div class="field">
+          <div class="field-head"><span class="field-icon">🔵</span><strong>Statusni dot</strong></div>
+          <p>Mali indikator u headeru zasebno prati zadnju operaciju upisa: u tijeku / uspješno / greška.</p>
+        </div>
+        <div class="field">
+          <div class="field-head"><span class="field-icon">↺</span><strong>Ručno osvježi</strong></div>
+          <p>Gumb <code>↺ Osvježi</code> u headeru povlači svježe podatke i služi kao fallback kad realtime kanal kasni ili nije aktivan.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 7. POSTAVKE -->
+    <div class="section" id="postavke">
+      <div class="sec-header">
+        <div class="sec-icon">⚙️</div>
+        <h2>7. Postavke i backup</h2>
+      </div>
+      <p class="sec-intro">Hamburger gumb (☰) u headeru otvara settings drawer s tri grupe postavki.</p>
+
+      <div class="fields">
+        <div class="field">
+          <div class="field-head"><span class="field-icon">💶</span><strong>Naknade — globalno</strong></div>
+          <p>Po kategoriji, akvizicija, dron, kilometar, prag kilometara i propuštena dobit za otkaz. Vrijede za sve fotografe ako nemaju override.</p>
+        </div>
+        <div class="field">
+          <div class="field-head"><span class="field-icon">🧾</span><strong>Porezne postavke — po fotografu</strong></div>
+          <p>Za svakog fotografa posebno: OIB, grad, status, paušalni izdaci, MIO, ZO, porez i informativni prirez. Utječe na live kalkulaciju u obračunu.</p>
+        </div>
+        <div class="field">
+          <div class="field-head"><span class="field-icon">💾</span><strong>Lokalni backup (JSON)</strong></div>
+          <p>Backup sprema obračune, globalne naknade i porezne postavke svih fotografa. Nije cloud backup — to je lokalna sigurnosna kopija.</p>
+        </div>
+        <div class="field">
+          <div class="field-head"><span class="field-icon">⬆️</span><strong>Uvezi backup</strong></div>
+          <p>Uvoz JSON datoteke vraća sve porezne postavke i obračune iz prethodne kopije.</p>
+        </div>
+      </div>
+
+      <div class="note warn">
+        <span class="note-icon">⚠️</span>
+        <span>Backup sprema lokalne obračune, ali ne i podatke iz Supabase baze. Za cloud backup koristi Supabase konzolu ili vlastiti export.</span>
+      </div>
+    </div>
+
+    <!-- 8. PWA -->
+    <div class="section" id="pwa">
+      <div class="sec-header">
+        <div class="sec-icon">📱</div>
+        <h2>8. PWA i service worker</h2>
+      </div>
+      <p class="sec-intro">Aplikacija ima manifest i može se instalirati kao web app, ali nema agresivno cachiranje kao FotoKalk PRO.</p>
+
+      <div class="fields">
+        <div class="field">
+          <div class="field-head"><span class="field-icon">📲</span><strong>Instalacija</strong></div>
+          <p>Chrome / Edge nude instalacijsku traku automatski. Na iOS-u: Safari → Dijeli → Dodaj na početni zaslon.</p>
+        </div>
+        <div class="field">
+          <div class="field-head"><span class="field-icon">⚙️</span><strong>Service Worker (<code>sw-nalozi.js</code>)</strong></div>
+          <p>Minimalan SW bez zasebne cache strategije za fetch — odmah aktivira novi worker i preuzima kontrolu nad klijentima. Nije zamišljeno za offline rad.</p>
+        </div>
+      </div>
+
+      <div class="note info">
+        <span class="note-icon">ℹ️</span>
+        <span>Admin aplikacija se ne koristi terenski pa offline rad nije prioritet. Za promjene PWA dijela uskladi <code>sw-nalozi.js</code> i <code>manifest-nalozi.json</code>.</span>
+      </div>
+    </div>
+
+    <!-- 9. NOVOSTI -->
+    <div class="section" id="novosti">
+      <div class="sec-header">
+        <div class="sec-icon">✨</div>
+        <h2>9. Novosti u v3</h2>
+      </div>
+
+      <div class="fields">
+        <div class="field">
+          <div class="field-head"><span class="field-icon">💶</span><strong>Obračun tab</strong><span class="tag new">Novo</span></div>
+          <p>Financijski obračun za svaki nalog s live kalkulacijom. Najveća nova funkcionalnost — stari help je praktički nije dokumentirao.</p>
+        </div>
+        <div class="field">
+          <div class="field-head"><span class="field-icon">📊</span><strong>Izvještaji tab</strong><span class="tag new">Novo</span></div>
+          <p>Pregled, Excel, Print/PDF i Batch print — obračunski ciklus sada je kompletno pokriven unutar aplikacije.</p>
+        </div>
+        <div class="field">
+          <div class="field-head"><span class="field-icon">⚙️</span><strong>Settings drawer</strong><span class="tag new">Novo</span></div>
+          <p>Postavke su sada u desnom draweru, a ne u statičkom prikazu. Porezne postavke po fotografu su tu i pokrivaju i naknade i poreze.</p>
+        </div>
+        <div class="field">
+          <div class="field-head"><span class="field-icon">💾</span><strong>Lokalni backup</strong><span class="tag new">Novo</span></div>
+          <p>Brz JSON izvoz i import admin podataka bez odlaska u bazu — obračuni, naknade i sve porezne postavke.</p>
+        </div>
+        <div class="field">
+          <div class="field-head"><span class="field-icon">🌙</span><strong>Tema</strong><span class="tag new">Novo</span></div>
+          <p>Tamna / svjetla tema s togglem u headeru. Stara aplikacija imala je samo tamnu temu.</p>
+        </div>
+      </div>
+
+      <div class="note ok">
+        <span class="note-icon">✅</span>
+        <span>Ova datoteka je kompletna zamjena za stari help — uključuje sve bitne funkcionalnosti pronađene u aktualnom kodu v3.</span>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<footer>Adriatic Nalozi v3 — Admin dokumentacija &nbsp;·&nbsp; ažurirano 24.04.2026.</footer>
 </body>
 </html>

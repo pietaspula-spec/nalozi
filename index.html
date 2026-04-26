@@ -508,6 +508,14 @@ textarea{resize:vertical;min-height:58px;font-size:.82rem;line-height:1.5}
       <div class="ib" style="margin-top:10px;font-size:.7rem">ℹ️ Backup sadrži sve obračune, naknade i porezne postavke.</div>
     </div>
 
+    <div class="sdsec">
+      <div class="sdsec-title">❓ Pomoć</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <a class="btn bo" href="help.html" target="_blank" rel="noopener" style="width:100%;justify-content:center">❓ Otvori help</a>
+      </div>
+      <div class="ib" style="margin-top:10px;font-size:.7rem">ℹ️ Upute za naloge, obračune, izvještaje i backup.</div>
+    </div>
+
   </div>
 </div>
 
@@ -517,6 +525,7 @@ textarea{resize:vertical;min-height:58px;font-size:.82rem;line-height:1.5}
     <div class="mt">💰 Obračun posla</div>
     <div class="msub" id="obrSub" style="color:var(--acc);font-weight:600;font-size:.82rem"></div>
     <div class="ib" id="obrInfo"></div>
+    <div class="ib" id="obrFotoMeta" style="display:none;margin-top:8px"></div>
 
     <!-- Datumi i meta -->
     <div class="fr c3">
@@ -932,6 +941,16 @@ function importAll(e){
 
 // ── AUTH ──
 function clearAuth(){jwt=myUid=myEmail=null;['an_jwt','an_uid','an_email'].forEach(k=>localStorage.removeItem(k))}
+function clearLocalAdminData(){
+  [
+    KALK_CFG_KEY,
+    OBRACUNI_KEY,
+    FOTO_TAX_KEY
+  ].forEach(k=>localStorage.removeItem(k));
+  Object.keys(localStorage).forEach(k=>{
+    if(k.startsWith('nseen_')) localStorage.removeItem(k);
+  });
+}
 function showLogin(){g('loginScreen').style.display='flex';g('app').style.display='none'}
 
 async function doLogin(){
@@ -956,7 +975,7 @@ async function doLogin(){
   }catch(e){err.textContent=(e.name==='AbortError'?'Veza nije odgovorila (timeout) — pokušaj ponovo.':'Greška veze: '+e.message);err.style.display='block'}
   finally{btn.disabled=false;btn.textContent='Prijava →'}
 }
-function doLogout(){confirm2('Odjavi se?',()=>{stopRealtime();clearAuth();allRows=[];selUid=null;showLogin()})}
+function doLogout(){confirm2('Odjavi se? Lokalni obračuni i postavke bit će obrisani s ovog uređaja.',()=>{stopRealtime();clearAuth();clearLocalAdminData();allRows=[];selUid=null;showLogin()})}
 
 document.addEventListener('keydown',e=>{
   if(e.key==='Enter'&&g('loginScreen').style.display!=='none')doLogin();
@@ -1006,7 +1025,7 @@ async function sbPatchPlan(uid,newPlan,opts={}){
     // Pobjeđuje novija izmjena: _adminTs vs _fotoTs.
     const SHARED_SYNC_FIELDS = ['sifra','ug','ime1','ime2','tel','adr','lat','lng'];
     // Admin-only polja ostaju u domeni agencije.
-    const ADMIN_ONLY_FIELDS_PATCH = ['jed','link','note_agencija','note','_adminTs'];
+    const ADMIN_ONLY_FIELDS_PATCH = ['pbr','grad','jed','link','note_agencija','note','_adminTs'];
     const existingMap = new Map(existingPlan.map(p=>[String(p.id),p]));
     const safePlan = newPlan.map(np => {
       const existing = existingMap.get(String(np.id));
@@ -1141,7 +1160,8 @@ function renderCard(p){
   // FIX-SYNC-C: statLbl — jasno razlikujemo "čeka datum" od "na čekanju s datumom"
   const statLbl={ceka:'Na čekanju',obavljeno:'Obavljeno',otkazano:'Otkazano',nodatum:'Čeka datum fotografa'};
   const ime=((p.ime1||'')+' '+(p.ime2||'')).trim();
-  const maps=p.lat&&p.lng?`https://maps.google.com/?q=${p.lat},${p.lng}`:p.adr?`https://maps.google.com/?q=${encodeURIComponent(p.adr)}`:'';
+  const mjesto=[p.adr||'', [p.pbr||'',p.grad||''].filter(Boolean).join(' ')].filter(Boolean).join(', ');
+  const maps=p.lat&&p.lng?`https://maps.google.com/?q=${p.lat},${p.lng}`:mjesto?`https://maps.google.com/?q=${encodeURIComponent(mjesto)}`:'';
   const pid=String(p.id).replace(/["'<>]/g,'');
   const hasObr=(stat==='obavljeno'||stat==='otkazano')&&!!getObracun(pid);
   const obrBtn=(stat==='obavljeno'||stat==='otkazano')?
@@ -1165,8 +1185,9 @@ function renderCard(p){
     <span class="ps ${cls}">${statLbl[cls]||statLbl[stat]}</span>${newDot}
     ${p.sifra?`<div class="pr">🔑 <strong style="color:var(--acc);font-family:var(--mono)">#${esc(p.sifra)}</strong></div>`:''}
     ${p.ug?`<div class="pr">📄 ${esc(p.ug)}</div>`:''}
-    ${ime?`<div class="pr">👤 ${esc(ime)}${p.tel?' · <a href="tel:'+esc(p.tel)+'">'+esc(p.tel)+'</a>':''}</div>`:''}
-    ${p.adr?`<div class="pr">📍 <a href="${maps}" target="_blank">${esc(p.adr)}</a></div>`:''}
+    ${ime?`<div class="pr">👤 ${esc(ime)}</div>`:''}
+    ${p.tel?`<div class="pr">📞 <a href="tel:${esc(p.tel)}">${esc(p.tel)}</a></div>`:''}
+    ${mjesto?`<div class="pr">📍 <a href="${maps}" target="_blank">${esc(mjesto)}</a></div>`:''}
     ${noteAg?`<div class="pnote">📋 ${esc(noteAg)}</div>`:''}
     ${noteFoto}
     ${fotoDates}
@@ -1206,12 +1227,22 @@ function renderObracunCard(p){
   const ime=((p.ime1||'')+' '+(p.ime2||'')).trim();
   const pid=String(p.id).replace(/["'<>]/g,'');
   const title=p.sifra?`#${esc(p.sifra)}${p.adr?' — '+esc(p.adr):''}`:esc(p.adr||ime||'(bez adrese)');
+  const dtKontakt=obr?.dtKontakt||p.dt_kontakt||'';
+  const dtObrada=p.dt_obrada||'';
+  const dtIsporuka=obr?.dtIsporuka||p.dt_isporuka||'';
+  const obrFotoMeta=(dtKontakt||dtObrada||dtIsporuka)
+    ? `<div class="obr-sub" style="margin-top:4px;display:flex;gap:10px;flex-wrap:wrap">
+        ${dtKontakt?`<span>📞 ${fmtDS(dtKontakt)}</span>`:''}
+        ${dtObrada?`<span>🔧 ${fmtDS(dtObrada)}</span>`:''}
+        ${dtIsporuka?`<span>📦 ${fmtDS(dtIsporuka)}</span>`:''}
+      </div>` : '';
   if(obr){
     return`<div class="obr-card">
       <div class="obr-head">
         <div style="min-width:0">
           <div class="obr-title">${title}</div>
           <div class="obr-sub">${p.dt?fmtDS(p.dt):'—'}${p.ug?' · '+esc(p.ug):''}</div>
+          ${obrFotoMeta}
         </div>
         <button class="btn bo bsm" style="flex-shrink:0" onclick="openObracun('${pid}','${selUid}')">✏️ Uredi</button>
       </div>
@@ -1238,6 +1269,7 @@ function renderObracunCard(p){
         <div style="min-width:0">
           <div class="obr-title">${title}</div>
           <div class="obr-sub">${p.dt?fmtDS(p.dt):'—'}${p.ug?' · '+esc(p.ug):''} · <em style="color:var(--mut)">Nema obračuna</em></div>
+          ${obrFotoMeta}
         </div>
         <button class="btn bp bsm" style="flex-shrink:0" onclick="openObracun('${pid}','${selUid}')">💰 Unesi</button>
       </div>
@@ -1709,6 +1741,7 @@ function openNalog(planId){
     g('n-sifra').value=item.sifra||'';g('n-ug').value=item.ug||'';
     g('n-ime1').value=item.ime1||'';g('n-ime2').value=item.ime2||'';
     g('n-tel').value=item.tel||'';g('n-adr').value=item.adr||'';
+    g('n-pbr').value=item.pbr||'';g('n-grad').value=item.grad||'';
     g('n-jed').value=item.jed!=null&&item.jed!==''?item.jed:'';
     g('n-link').value=item.link||'';
     g('n-lat').value=item.lat||'';g('n-lng').value=item.lng||'';
@@ -1725,7 +1758,7 @@ function openNalog(planId){
       g('n-foto-dates').textContent=dtParts.join('   ');
     }
   }else{
-    ['n-sifra','n-ug','n-ime1','n-ime2','n-tel','n-adr','n-jed','n-link','n-lat','n-lng','n-note-ag'].forEach(id=>g(id).value='');
+    ['n-sifra','n-ug','n-ime1','n-ime2','n-tel','n-adr','n-pbr','n-grad','n-jed','n-link','n-lat','n-lng','n-note-ag'].forEach(id=>g(id).value='');
     g('n-foto-info').style.display='none';
     popFotoSel(selUid);
   }
@@ -1751,6 +1784,7 @@ async function saveNalog(){
         sifra:v('n-sifra').trim(), ug:v('n-ug').trim(),
         ime1:v('n-ime1').trim(),   ime2:v('n-ime2').trim(),
         tel:v('n-tel').trim(),     adr:v('n-adr').trim(),
+        pbr:v('n-pbr').trim(),     grad:v('n-grad').trim(),
         jed:parseInt(v('n-jed'))||0, link:v('n-link').trim(),
         lat:v('n-lat').trim(),     lng:v('n-lng').trim(),
         note_agencija:v('n-note-ag').trim(),
@@ -1763,6 +1797,7 @@ async function saveNalog(){
         sifra:v('n-sifra').trim(), ug:v('n-ug').trim(),
         ime1:v('n-ime1').trim(),   ime2:v('n-ime2').trim(),
         tel:v('n-tel').trim(),     adr:v('n-adr').trim(),
+        pbr:v('n-pbr').trim(),     grad:v('n-grad').trim(),
         jed:parseInt(v('n-jed'))||0, link:v('n-link').trim(),
         lat:v('n-lat').trim(),     lng:v('n-lng').trim(),
         note_agencija:v('n-note-ag').trim(),
@@ -1803,14 +1838,23 @@ function openObracun(planId,uid){
     item.ug?`📄 ${esc(item.ug)}`:null,
     `📊 ${taxCfg.grad} · ${taxCfg.status}`,
   ].filter(Boolean).join(' &nbsp;·&nbsp; ');
+  const fotoMeta=g('obrFotoMeta');
+  const fotoMetaParts=[];
+  if(item.dt_kontakt)fotoMetaParts.push(`📞 Kontaktiran: ${fmtDS(item.dt_kontakt)}`);
+  if(item.dt_obrada)fotoMetaParts.push(`🔧 Obrada: ${fmtDS(item.dt_obrada)}`);
+  if(item.dt_isporuka)fotoMetaParts.push(`📦 Isporučeno: ${fmtDS(item.dt_isporuka)}`);
+  if(fotoMeta){
+    fotoMeta.style.display=fotoMetaParts.length?'block':'none';
+    fotoMeta.textContent=fotoMetaParts.join('   ');
+  }
 
   const ex=getObracun(planId);
   g('obr-kat').value=ex?.kat!=null?ex.kat:'';
   g('obr-km').value=ex?.km!=null?ex.km:(item.put_km!=null&&item.put_km!==''?item.put_km:'');
   g('obr-ostalo').value=ex?.ostalo!=null?ex.ostalo:(item.put_ostalo!=null&&item.put_ostalo!==''?item.put_ostalo:'');
   setObracunPhotoHints(item, ex);
-  g('obr-dtKontakt').value=ex?.dtKontakt||'';
-  g('obr-dtIsporuka').value=ex?.dtIsporuka||'';
+  g('obr-dtKontakt').value=ex?.dtKontakt||item.dt_kontakt||'';
+  g('obr-dtIsporuka').value=ex?.dtIsporuka||item.dt_isporuka||'';
   g('obr-dogovoreno').value=ex?.dogovoreno||'Adriatic.hr';
   g('obr-dron').checked=ex?.dron||false;
   g('obr-akv').checked=ex?.akv||false;
@@ -1965,7 +2009,18 @@ async function startApp(){
       {headers:{'apikey':SB_KEY,'Authorization':`Bearer ${jwt}`}});
     const rows=chk.ok?await chk.json():[];
     if(!rows.length){clearAuth();const e=g('lErr');e.textContent='⛔ Pristup odbijen.';e.style.display='block';showLogin();return}
-  }catch(e){}
+  }catch(e){
+    clearAuth();
+    const err=g('lErr');
+    if(err){
+      err.textContent=e.name==='AbortError'
+        ? 'Veza nije odgovorila pri provjeri admin pristupa. Pokušaj ponovo.'
+        : 'Greška provjere admin pristupa: '+e.message;
+      err.style.display='block';
+    }
+    showLogin();
+    return;
+  }
   g('loginScreen').style.display='none';g('app').style.display='block';
   g('hEmail').textContent=myEmail||'';applyTheme();
   g('fList').innerHTML='<div class="loading"><div class="sp"></div>Učitavanje fotografa…</div>';

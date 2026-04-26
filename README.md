@@ -1,121 +1,131 @@
-# 📷 Adriatic Nalozi
+# Adriatic Nalozi
 
-Admin alat za upravljanje nalozima snimanja — Adriatic.hr
+Admin aplikacija za upravljanje nalozima, obračunima i izvještajima za fotografe Adriatic.hr sustava.
 
-PWA aplikacija. Radi u browseru i može se instalirati na desktop ili mobitel.
+## Što aplikacija radi
 
----
+- admin prijava preko Supabase Auth
+- provjera admin prava preko tablice `admins`
+- pregled svih fotografa
+- dodavanje i uređivanje naloga
+- premještanje naloga drugom fotografu
+- obračun po poslu
+- mjesečni izvještaji
+- Excel export i Print/PDF
+- lokalni backup postavki i obračuna
+- realtime osvježavanje promjena
 
-## Što radi
+## Glavne funkcionalnosti
 
-- Admin vidi sve fotografe i njihove naloge
-- Dodavanje i uređivanje naloga (šifra objekta, ugovor, kontakt, adresa, GPS)
-- Datum snimanja i status postavlja fotograf — admin ih ne može mijenjati
-- Nalog se može dodijeliti drugom fotografu
-- Filtriranje naloga: Na čekanju / Svi / Obavljeno / Otkazano
-- Pretraživanje fotografa
+### 1. Admin login
 
----
+Nakon logina aplikacija dodatno provjerava ima li korisnik admin pristup. Ako nije admin, pristup se odbija.
 
-## Tehnologija
+### 2. Pregled fotografa i naloga
 
-| Što | Kako |
-|-----|------|
-| Frontend | Vanilla HTML/CSS/JS — jedna datoteka, nema frameworka |
-| Baza | Supabase (PostgreSQL + REST API) |
-| Auth | Supabase Auth (email/lozinka) |
-| Hosting | GitHub Pages |
-| PWA | Service Worker + Web App Manifest |
+Lijevi panel prikazuje fotografe i njihove badge oznake, a desni panel prikazuje radni prikaz za odabranog fotografa.
 
----
+Aplikacija ima tri glavna taba:
+
+- `Nalozi`
+- `Obračun`
+- `Izvještaji`
+
+### 3. Nalozi
+
+Za svaki nalog admin može uređivati:
+
+- šifru objekta
+- broj ugovora
+- kontakt podatke
+- adresu
+- GPS
+- broj smještajnih jedinica
+- link
+- napomenu agencije
+
+Fotograf i admin dijele iste podatke kroz merge logiku, pri čemu fotografova statusna i terenska polja ostaju sačuvana.
+
+### 4. Obračun
+
+Za obavljene i otkazane naloge moguće je spremiti obračun koji uključuje:
+
+- broj kategorija
+- kilometre
+- dron
+- akviziciju
+- otkaz
+- ostale troškove
+- datum kontaktiranja
+- datum isporuke
+- verifikaciju
+
+Obračun koristi:
+
+- globalne naknade
+- porezne postavke po fotografu
+
+### 5. Izvještaji
+
+Tab Izvještaji omogućuje:
+
+- pregled po mjesecima
+- pregled po fotografu
+- Excel export
+- Print/PDF
+- Batch print
+
+### 6. Realtime
+
+Aplikacija koristi Supabase realtime kanal za automatski prikaz promjena koje fotograf napravi u svojoj aplikaciji.
+
+Prisutni indikatori:
+
+- LIVE status veze
+- status zadnje operacije upisa
+
+### 7. Postavke
+
+Hamburger izbornik otvara drawer s:
+
+- globalnim naknadama
+- poreznim postavkama po fotografu
+- lokalnim backupom
+
+### 8. Lokalni backup
+
+Backup sprema:
+
+- obračune
+- globalne naknade
+- porezne postavke po fotografima
+
+Podržan je i povrat iz JSON datoteke.
 
 ## Struktura repoa
 
-```
-index.html              ← glavni app (prebačen iz adriatic-nalozi.html)
-manifest-nalozi.json    ← PWA manifest
-sw-nalozi.js            ← Service Worker (network-first strategija)
-icon-192.png            ← ikona za PWA
-icon-512.png            ← ikona za PWA
+```text
+index.html
+help.html
+sw-nalozi.js
+manifest-nalozi.json
+icon-192.png
+icon-512.png
 README.md
+IZMJENE.md
 ```
 
----
+## Tehnologija
 
-## Postavljanje
+- Vanilla HTML / CSS / JavaScript
+- Supabase Auth
+- Supabase REST API
+- Supabase Realtime
+- localStorage
+- GitHub Pages
+- SheetJS (`xlsx`)
 
-### 1. Supabase
+## Napomena o service workeru
 
-Tablica `podaci`:
+Trenutni `sw-nalozi.js` je minimalan i ne koristi istu cache strategiju kao FotoKalk. Ako budeš radio PWA promjene, dobro je dokumentaciju držati usklađenu sa stvarnim kodom.
 
-```
-id          uuid, primary key
-created_at  timestamptz
-user_id     uuid, unique
-sadrzaj     jsonb
-```
-
-Tablica `admins`:
-
-```
-id          uuid, primary key
-user_id     uuid, unique
-created_at  timestamptz
-```
-
-RLS politike na tablici `podaci`:
-
-```sql
--- Fotografi čitaju/mijenjaju samo vlastiti red
-CREATE POLICY "users_select_own" ON podaci
-  FOR SELECT USING (auth.uid() = user_id);
-
-CREATE POLICY "users_update_own" ON podaci
-  FOR UPDATE USING (auth.uid() = user_id);
-
-CREATE POLICY "users_insert_own" ON podaci
-  FOR INSERT WITH CHECK (auth.uid() = user_id);
-
--- Admin čita i mijenja sve
-CREATE POLICY "admins_select_all" ON podaci
-  FOR SELECT USING (
-    EXISTS (SELECT 1 FROM admins WHERE admins.user_id = auth.uid())
-  );
-
-CREATE POLICY "admins_update_all" ON podaci
-  FOR UPDATE USING (
-    EXISTS (SELECT 1 FROM admins WHERE admins.user_id = auth.uid())
-  );
-```
-
-RLS politike na tablici `admins`:
-
-```sql
-CREATE POLICY "admins_self_read" ON admins
-  FOR SELECT USING (auth.uid() = user_id);
-```
-
-Dodaj admina:
-
-```sql
-INSERT INTO admins (user_id) VALUES ('tvoj-uuid-ovdje');
-```
-
-### 2. GitHub Pages
-
-1. Novi repozitorij na GitHubu
-2. Upload svih datoteka — `adriatic-nalozi.html` preimenuj u `index.html`
-3. Settings → Pages → Branch: main → / (root) → Save
-4. App je dostupna na `https://tvojeime.github.io/ime-repoa/`
-
----
-
-## Sigurnost
-
-Publishable key u kodu je namjerno javan — štiti ga Supabase RLS. Bez valjane prijave nije moguće pročitati ni jedan red iz baze. Admin status se provjerava na serveru pri svakoj prijavi i pri svakom pokretanju aplikacije.
-
----
-
-## Povezane aplikacije
-
-**FotoKalk PRO** — aplikacija za fotografe (kalkulator honorara + plan snimanja). Fotografi putem nje vide i ažuriraju svoje naloge koje admin dodjeljuje kroz Adriatic Nalozi.
