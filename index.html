@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NaloziAdriatic v3.0</title>
-<link rel="manifest" href="manifest-nalozi.json">
+<title>NaloziAdriatic v3.1</title>
+<link rel="manifest" href="manifest-nalozi.json?v=3.1">
 <meta name="theme-color" content="#0b0c0e" id="themeColorMeta">
 <meta name="description" content="Upravljanje nalozima i obračunima — Adriatic.hr">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -396,7 +396,13 @@ textarea{resize:vertical;min-height:58px;font-size:.82rem;line-height:1.5}
         <button class="ft" onclick="setFilt('svi',this)">Svi</button>
         <button class="ft" onclick="setFilt('obavljeno',this)">Obavljeno</button>
         <button class="ft" onclick="setFilt('otkazano',this)">Otkazano</button>
-        <span style="margin-left:auto;font-size:.67rem;color:var(--mut);font-family:var(--mono)" id="nCnt"></span>
+        <select id="nSortSel" onchange="setNalogSort(this.value)" style="margin-left:auto;font-size:.72rem;padding:4px 8px;border-radius:20px;border:1px solid var(--brd);background:var(--surf2);color:var(--txt);cursor:pointer">
+          <option value="dt_asc">Datum obrade ↑</option>
+          <option value="dt_desc">Datum obrade ↓</option>
+          <option value="created_desc">Dodano ↓</option>
+          <option value="created_asc">Dodano ↑</option>
+        </select>
+        <span style="font-size:.67rem;color:var(--mut);font-family:var(--mono)" id="nCnt"></span>
       </div>
 
       <!-- PRINT HEADER (vidljiv samo pri ispisu) -->
@@ -528,10 +534,14 @@ textarea{resize:vertical;min-height:58px;font-size:.82rem;line-height:1.5}
     <div class="ib" id="obrFotoMeta" style="display:none;margin-top:8px"></div>
 
     <!-- Datumi i meta -->
-    <div class="fr c3">
-      <div><label>Datum kontaktiranja vlasnika</label>
+    <div class="fr c2">
+      <div><label>KONTAKT</label>
         <input type="date" id="obr-dtKontakt"></div>
-      <div><label>Datum isporuke fotografija</label>
+      <div><label>FOTOGRAF.</label>
+        <input type="date" id="obr-dtObrada"></div>
+    </div>
+    <div class="fr c2">
+      <div><label>DOSTAVLJENO</label>
         <input type="date" id="obr-dtIsporuka"></div>
       <div><label>Dogovoreno od strane</label>
         <select id="obr-dogovoreno">
@@ -699,7 +709,7 @@ const GRADOVI = [
 let jwt     = localStorage.getItem('an_jwt')  || null;
 let myUid   = localStorage.getItem('an_uid')  || null;
 let myEmail = localStorage.getItem('an_email')|| null;
-let allRows  = [], selUid = null, planFilt = 'ceka', editPId = null;
+let allRows  = [], selUid = null, planFilt = 'ceka', editPId = null, nalogSort = 'dt_asc';
 let rpView   = 'nalozi', obrNalogId = null, obrFotoUid = null;
 let izScope  = 'sel', izMonth = 'all'; // 'all' or 'YYYY-MM'
 
@@ -1023,9 +1033,9 @@ async function sbPatchPlan(uid,newPlan,opts={}){
 
     // Zajednička polja uređuju i admin i fotograf.
     // Pobjeđuje novija izmjena: _adminTs vs _fotoTs.
-    const SHARED_SYNC_FIELDS = ['sifra','ug','ime1','ime2','tel','adr','lat','lng'];
+    const SHARED_SYNC_FIELDS = ['sifra','ug','ime1','ime2','tel','adr','pbr','grad','lat','lng','dt_kontakt','dt_obrada','dt_isporuka'];
     // Admin-only polja ostaju u domeni agencije.
-    const ADMIN_ONLY_FIELDS_PATCH = ['pbr','grad','jed','link','note_agencija','note','_adminTs'];
+    const ADMIN_ONLY_FIELDS_PATCH = ['jed','link','note_agencija','note','_adminTs'];
     const existingMap = new Map(existingPlan.map(p=>[String(p.id),p]));
     const safePlan = newPlan.map(np => {
       const existing = existingMap.get(String(np.id));
@@ -1139,6 +1149,31 @@ function setFilt(f,btn){
   document.querySelectorAll('.rp-fr .ft').forEach(b=>b.classList.remove('on'));
   btn.classList.add('on');renderNalozi();
 }
+function setNalogSort(v){nalogSort=v||'dt_asc';renderNalozi()}
+function planCreatedTs(p){
+  const m=String(p?.id||'').match(/^(\d{13})/);
+  return m?parseInt(m[1],10):0;
+}
+function sortNaloziForView(plan,mode){
+  const arr=[...plan];
+  arr.sort((a,b)=>{
+    if(mode==='dt_desc'){
+      const ad=a.dt||'', bd=b.dt||'';
+      if(!ad&&!bd)return planCreatedTs(b)-planCreatedTs(a);
+      if(!ad)return 1;
+      if(!bd)return -1;
+      return bd.localeCompare(ad) || (planCreatedTs(b)-planCreatedTs(a));
+    }
+    if(mode==='created_desc')return planCreatedTs(b)-planCreatedTs(a) || ((b.dt||'').localeCompare(a.dt||''));
+    if(mode==='created_asc')return planCreatedTs(a)-planCreatedTs(b) || ((a.dt||'').localeCompare(b.dt||''));
+    const ad=a.dt||'', bd=b.dt||'';
+    if(!ad&&!bd)return planCreatedTs(a)-planCreatedTs(b);
+    if(!ad)return 1;
+    if(!bd)return -1;
+    return ad.localeCompare(bd) || (planCreatedTs(a)-planCreatedTs(b));
+  });
+  return arr;
+}
 
 // ── RENDER NALOZI ──
 function renderNalozi(){
@@ -1146,12 +1181,13 @@ function renderNalozi(){
   if(!selUid){list.innerHTML=`<div class="empty"><div class="ei">👈</div>Odaberi fotografa.</div>`;g('nCnt').textContent='';return}
   const row=getRowByUid(selUid);let plan=getPlan(row?.sadrzaj);
   if(planFilt!=='svi')plan=plan.filter(p=>planFilt==='ceka'?(!p.stat||p.stat==='ceka'):p.stat===planFilt);
+  plan=sortNaloziForView(plan,nalogSort);
+  const sortSel=g('nSortSel');if(sortSel&&sortSel.value!==nalogSort)sortSel.value=nalogSort;
   g('nCnt').textContent=plan.length?plan.length+' prikazano':'';
   if(!plan.length){
     const msgs={ceka:'Nema naloga na čekanju.',obavljeno:'Nema obavljenih.',otkazano:'Nema otkazanih.',svi:'Nema naloga.'};
     list.innerHTML=`<div class="empty"><div class="ei">📋</div>${msgs[planFilt]||'Nema naloga.'}</div>`;return;
   }
-  plan.sort((a,b)=>(!a.dt&&!b.dt)?0:!a.dt?1:!b.dt?-1:a.dt.localeCompare(b.dt));
   list.innerHTML=plan.map(p=>renderCard(p)).join('');
 }
 
@@ -1228,7 +1264,7 @@ function renderObracunCard(p){
   const pid=String(p.id).replace(/["'<>]/g,'');
   const title=p.sifra?`#${esc(p.sifra)}${p.adr?' — '+esc(p.adr):''}`:esc(p.adr||ime||'(bez adrese)');
   const dtKontakt=obr?.dtKontakt||p.dt_kontakt||'';
-  const dtObrada=p.dt_obrada||'';
+  const dtObrada=obr?.dtObrada||p.dt_obrada||'';
   const dtIsporuka=obr?.dtIsporuka||p.dt_isporuka||'';
   const obrFotoMeta=(dtKontakt||dtObrada||dtIsporuka)
     ? `<div class="obr-sub" style="margin-top:4px;display:flex;gap:10px;flex-wrap:wrap">
@@ -1328,7 +1364,7 @@ function renderIzvjestaji(){
     <thead>
       <tr>
         ${showFoto?'<th class="grp" rowspan="2">Fotograf</th>':''}
-        <th class="grp" colspan="5">Obrada</th>
+        <th class="grp" colspan="6">Obrada</th>
         <th class="grp">Akv.</th>
         <th class="grp" colspan="2">Putni</th>
         <th class="grp" colspan="6">Bruto honorar</th>
@@ -1337,7 +1373,7 @@ function renderIzvjestaji(){
         <th class="grp" colspan="2">Status</th>
       </tr>
       <tr>
-        <th>Ugovor</th><th>Kat.</th><th>Šifra</th><th>Kontakt.</th><th>Snimanje</th>
+        <th>Ugovor</th><th>Kat.</th><th>Šifra</th><th>KONTAKT</th><th>FOTOGRAF.</th><th>DOSTAVLJENO</th>
         <th>Dogovoreno</th>
         <th class="num">Km</th><th class="num">Ostalo</th>
         <th class="num">Foto.</th><th class="num">Dron</th><th class="num">Otkaz</th><th class="num">Put</th><th class="num">Ostalo</th><th class="num tot">Ukupno</th>
@@ -1356,8 +1392,9 @@ function renderIzvjestaji(){
         <td style="font-size:.72rem;color:var(--mut2)">${esc(nalog.ug||'—')}</td>
         <td>${obr.otkaz?'—':(obr.kat||0)}</td>
         <td><span style="font-family:var(--mono);font-size:.75rem;color:var(--acc)">${nalog.sifra?'#'+esc(nalog.sifra):'—'}</span></td>
-        <td>${obr.dtKontakt?fmtDS(obr.dtKontakt):'—'}</td>
-        <td>${fmtDS(nalog.dt)}</td>
+        <td>${(nalog.dt_kontakt||obr.dtKontakt)?fmtDS(nalog.dt_kontakt||obr.dtKontakt):'—'}</td>
+        <td>${(nalog.dt_obrada||obr.dtObrada)?fmtDS(nalog.dt_obrada||obr.dtObrada):'—'}</td>
+        <td>${(nalog.dt_isporuka||obr.dtIsporuka)?fmtDS(nalog.dt_isporuka||obr.dtIsporuka):'—'}</td>
         <td>${esc(obr.dogovoreno||'Adriatic.hr')}</td>
         <td class="num">${obr.km||0}</td>
         <td class="num">${m2(obr.ostalo||0)}</td>
@@ -1386,7 +1423,7 @@ function renderIzvjestaji(){
     const totalBKmM=items.reduce((s,d)=>s+(d.obr.bKm||0),0);
     html+=`<tr class="totrow">
       ${showFoto?'<td></td>':''}
-      <td colspan="8" style="font-size:.65rem;color:var(--mut2);font-weight:700">Ukupno ${fmtMonth(ym)}</td>
+      <td colspan="9" style="font-size:.65rem;color:var(--mut2);font-weight:700">Ukupno ${fmtMonth(ym)}</td>
       <td class="num">${m2(totalBKatM)}</td><td></td><td></td>
       <td class="num">${m2(totalBKmM)}</td><td></td>
       <td class="num tot">${m2(mBruto)}</td>
@@ -1458,13 +1495,9 @@ function printArchiveReport(){
 
   const rows=data.map(({nalog,obr,fotoIme},idx)=>{
     const mjesto=nalog.adr||'—';
-    const kontakt=nalog.tel||nalog.dt_kontakt||obr.dtKontakt||'—';
-    const komentar=nalog.note_foto||'—';
-    const napAg=nalog.note_agencija||nalog.note||'—';
     const brojJed=nalog.jed||'—';
-    const link=nalog.link?`<a href="${esc(nalog.link)}" target="_blank" rel="noopener noreferrer">link</a>`:'—';
     const dtKontakt=nalog.dt_kontakt||obr.dtKontakt||'—';
-    const dtObrada=nalog.dt_obrada||'—';
+    const dtObrada=nalog.dt_obrada||obr.dtObrada||'—';
     const dtIsporuka=nalog.dt_isporuka||obr.dtIsporuka||'—';
     const pd=obr.pd!=null?`${obr.pd}%`:'—';
     const ver=obr.verificirano?'DA':'—';
@@ -1477,9 +1510,6 @@ function printArchiveReport(){
       <td>${esc(mjesto)}</td>
       <td>${esc(nalog.ime1||'')} ${esc(nalog.ime2||'')}</td>
       <td>${esc(nalog.tel||'—')}</td>
-      <td>${esc(napAg)}</td>
-      <td>${esc(komentar)}</td>
-      <td class="c">${link}</td>
       <td class="c">${obr.otkaz?'—':esc(String(obr.kat||0))}</td>
       <td>${dtKontakt!=='—'?fmtDS(dtKontakt):'—'}</td>
       <td>${dtObrada!=='—'?fmtDS(dtObrada):'—'}</td>
@@ -1506,21 +1536,21 @@ function printArchiveReport(){
   const html=`<!DOCTYPE html>
   <html lang="hr"><head><meta charset="UTF-8"><title>${reportTitle}</title>
   <style>
-    @page{size:A4 landscape;margin:8mm}
+    @page{size:A4 landscape;margin:6mm}
     body{font-family:Segoe UI,Arial,sans-serif;color:#111;margin:0}
     .wrap{width:100%;max-width:none}
-    .hd{margin-bottom:8px}
-    .hd-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px}
-    .brand{font-size:18px;font-weight:900}
-    .sub{font-size:11px;color:#444;margin-top:2px}
-    .meta{font-size:11px;text-align:right;line-height:1.5}
-    .bar{background:#39ff14;border:1px solid #111;padding:6px 10px;font-weight:900;text-align:center;font-size:16px}
-    .scope{display:flex;justify-content:space-between;font-size:11px;padding:6px 2px 0}
+    .hd{margin-bottom:6px}
+    .hd-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px}
+    .brand{font-size:15px;font-weight:900}
+    .sub{font-size:9px;color:#444;margin-top:1px}
+    .meta{font-size:9px;text-align:right;line-height:1.35}
+    .bar{background:#39ff14;border:1px solid #111;padding:4px 8px;font-weight:900;text-align:center;font-size:12px}
+    .scope{display:flex;justify-content:space-between;font-size:9px;padding:4px 2px 0}
     table{width:100%;border-collapse:collapse;table-layout:fixed}
-    th,td{border:1px solid #111;padding:3px 4px;font-size:10px;vertical-align:top;word-wrap:break-word}
+    th,td{border:1px solid #111;padding:2px 3px;font-size:8px;vertical-align:top;word-wrap:break-word;line-height:1.15}
     th{background:#ffd9b3}
-    th.grp{background:#39ff14;font-size:12px;font-style:italic;text-align:center}
-    th.subgrp{background:#7dff5d;font-size:11px;text-align:center}
+    th.grp{background:#39ff14;font-size:9px;font-style:italic;text-align:center}
+    th.subgrp{background:#7dff5d;font-size:8px;text-align:center}
     td.c{text-align:center}
     td.num{text-align:right;font-family:Consolas,monospace;white-space:nowrap}
     td.strong{font-weight:800}
@@ -1546,7 +1576,7 @@ function printArchiveReport(){
         <thead>
           <tr>
             <th class="grp" colspan="4">Ugovor</th>
-            <th class="grp" colspan="6">Ugostiteljski objekt</th>
+            <th class="grp" colspan="3">Ugostiteljski objekt</th>
             <th class="grp" colspan="4">Obrada (fotografiranje i popisivanje)</th>
             <th class="grp" colspan="1">Akvizicija</th>
             <th class="grp" colspan="2">Putni troškovi</th>
@@ -1566,13 +1596,10 @@ function printArchiveReport(){
             <th>mjesto / adresa</th>
             <th>iznajmljivač</th>
             <th>kontakt</th>
-            <th>napomena agencije</th>
-            <th>komentar fotografa</th>
-            <th>link</th>
             <th>broj kategorija</th>
-            <th>datum kontakt.</th>
-            <th>datum obrade</th>
-            <th>isporučeno</th>
+            <th>KONTAKT</th>
+            <th>FOTOGRAF.</th>
+            <th>DOSTAVLJENO</th>
             <th>dogovoreno</th>
             <th>udaljenost (km)</th>
             <th>ostalo (eur)</th>
@@ -1594,7 +1621,7 @@ function printArchiveReport(){
         <tbody>${rows}</tbody>
         <tfoot>
           <tr>
-            <td colspan="${izScope==='all'?23:22}">Ukupno ${esc(period)}</td>
+            <td colspan="${izScope==='all'?20:19}">Ukupno ${esc(period)}</td>
             <td class="num">${m2(totalBruto)}</td>
             <td class="num">—</td>
             <td class="num">${m2(totalB2)}</td>
@@ -1666,8 +1693,9 @@ function exportExcel(){
     'Šifra':               nalog.sifra||'',
     'Ugovor':              nalog.ug||'',
     'Adresa':              nalog.adr||'',
-    'Datum kontaktiran':   obr.dtKontakt||'',
-    'Datum isporuke':      obr.dtIsporuka||'',
+    'KONTAKT':             nalog.dt_kontakt||obr.dtKontakt||'',
+    'FOTOGRAF.':           nalog.dt_obrada||obr.dtObrada||'',
+    'DOSTAVLJENO':         nalog.dt_isporuka||obr.dtIsporuka||'',
     'Dogovoreno':          obr.dogovoreno||'Adriatic.hr',
     'Kat. (kom)':          obr.otkaz?0:(obr.kat||0),
     'Km (1 relacija)':     obr.km||0,
@@ -1854,6 +1882,7 @@ function openObracun(planId,uid){
   g('obr-ostalo').value=ex?.ostalo!=null?ex.ostalo:(item.put_ostalo!=null&&item.put_ostalo!==''?item.put_ostalo:'');
   setObracunPhotoHints(item, ex);
   g('obr-dtKontakt').value=ex?.dtKontakt||item.dt_kontakt||'';
+  g('obr-dtObrada').value=ex?.dtObrada||item.dt_obrada||'';
   g('obr-dtIsporuka').value=ex?.dtIsporuka||item.dt_isporuka||'';
   g('obr-dogovoreno').value=ex?.dogovoreno||'Adriatic.hr';
   g('obr-dron').checked=ex?.dron||false;
@@ -1936,7 +1965,7 @@ function cRow(lbl,val,cls=''){
   return`<div class="calc-row${cls?' '+cls:''}"><span>${lbl}</span><span class="mono">${val}</span></div>`;
 }
 
-function doSaveObracun(){
+async function doSaveObracun(){
   if(!obrNalogId)return;
   const cfg=kalkCfg();
   const taxCfg=getFotoTaxCfg(obrFotoUid||selUid||'');
@@ -1955,6 +1984,7 @@ function doSaveObracun(){
   const data={
     kat,km,dron,akv,otkaz,ostalo,
     dtKontakt:v('obr-dtKontakt')||'',
+    dtObrada:v('obr-dtObrada')||'',
     dtIsporuka:v('obr-dtIsporuka')||'',
     dogovoreno:v('obr-dogovoreno')||'Adriatic.hr',
     verificirano:g('obr-vrf')?.checked||false,
@@ -1963,6 +1993,27 @@ function doSaveObracun(){
     fotoUid:obrFotoUid,ts:Date.now()
   };
   try{saveObracunData(obrNalogId,data)}catch{return}
+  if(obrFotoUid){
+    try{
+      const fresh=await sbFetchFresh(obrFotoUid);
+      const plan=getPlan(fresh.sadrzaj);
+      const idx=plan.findIndex(p=>String(p.id)===String(obrNalogId));
+      if(idx>=0){
+        plan[idx]={
+          ...plan[idx],
+          dt_kontakt:data.dtKontakt,
+          dt_obrada:data.dtObrada,
+          dt_isporuka:data.dtIsporuka,
+          _adminTs:Date.now()
+        };
+        await sbPatchPlan(obrFotoUid,plan,{preserveMissing:true});
+      }
+    }catch(e){
+      toast('Obračun spremljen, ali sinkronizacija datuma nije uspjela: '+e.message,true);
+      renderCurrentView();
+      return;
+    }
+  }
   closeObracun();toast('Obračun spremljen ✓');renderCurrentView();
 }
 
@@ -2034,7 +2085,7 @@ async function startApp(){
 (function(){applyTheme();if(jwt&&myUid)startApp()})();
 
 if('serviceWorker' in navigator)
-  window.addEventListener('load',()=>navigator.serviceWorker.register('./sw-nalozi.js').catch(()=>{}));
+  window.addEventListener('load',()=>navigator.serviceWorker.register('./sw-nalozi.js?v=3.1').catch(()=>{}));
 </script>
 </body>
 </html>
