@@ -105,8 +105,8 @@ body.light .sdrow input,body.light .sdrow select{background:#f8f9fc;border-color
 .vt{background:transparent;border:none;border-bottom:3px solid transparent;color:var(--mut2);font-family:var(--sans);font-size:.76rem;font-weight:700;padding:9px 14px;cursor:pointer;transition:color .15s,border-color .15s;margin-bottom:-1px;white-space:nowrap;display:flex;align-items:center;gap:5px}
 .vt.on{color:var(--acc);border-bottom-color:var(--acc)}
 .vt:hover:not(.on){color:var(--txt)}
-.rp-fr{padding:9px 16px;border-bottom:1px solid var(--brd);display:flex;gap:6px;align-items:center;flex-shrink:0;background:var(--surf)}
-.ft{background:transparent;border:1px solid var(--brd);color:var(--mut2);font-family:var(--sans);font-size:.72rem;font-weight:600;padding:4px 12px;border-radius:20px;cursor:pointer;transition:all .18s;white-space:nowrap}
+.rp-fr{padding:9px 16px;border-bottom:1px solid var(--brd);display:flex;gap:6px;align-items:center;flex-shrink:0;background:var(--surf);overflow-x:auto}
+.ft{background:transparent;border:1px solid var(--brd);color:var(--mut2);font-family:var(--sans);font-size:.72rem;font-weight:600;padding:4px 12px;border-radius:20px;cursor:pointer;transition:all .18s;white-space:nowrap;flex-shrink:0}
 .ft.on{background:var(--acc);color:#000;border-color:var(--acc)}
 .ft:hover:not(.on){border-color:var(--acc);color:var(--acc)}
 .rp-list{flex:1;overflow-y:auto;padding:14px 16px}
@@ -397,10 +397,10 @@ textarea{resize:vertical;min-height:58px;font-size:.82rem;line-height:1.5}
         <button class="ft" onclick="setFilt('obavljeno',this)">Obavljeno</button>
         <button class="ft" onclick="setFilt('otkazano',this)">Otkazano</button>
         <select id="nSortSel" onchange="setNalogSort(this.value)" style="margin-left:auto;font-size:.72rem;padding:4px 8px;border-radius:20px;border:1px solid var(--brd);background:var(--surf2);color:var(--txt);cursor:pointer">
-          <option value="dt_asc">Datum obrade ↑</option>
-          <option value="dt_desc">Datum obrade ↓</option>
-          <option value="created_desc">Dodano ↓</option>
-          <option value="created_asc">Dodano ↑</option>
+          <option value="dt_asc">Datum obrade ▲</option>
+          <option value="dt_desc">Datum obrade ▼</option>
+          <option value="created_desc">Dodano ▼</option>
+          <option value="created_asc">Dodano ▲</option>
         </select>
         <span style="font-size:.67rem;color:var(--mut);font-family:var(--mono)" id="nCnt"></span>
       </div>
@@ -709,7 +709,7 @@ const GRADOVI = [
 let jwt     = localStorage.getItem('an_jwt')  || null;
 let myUid   = localStorage.getItem('an_uid')  || null;
 let myEmail = localStorage.getItem('an_email')|| null;
-let allRows  = [], selUid = null, planFilt = 'ceka', editPId = null, nalogSort = 'dt_asc';
+let allRows  = [], selUid = null, planFilt = 'ceka', editPId = null, nalogSort = 'created_desc';
 let rpView   = 'nalozi', obrNalogId = null, obrFotoUid = null;
 let izScope  = 'sel', izMonth = 'all'; // 'all' or 'YYYY-MM'
 
@@ -1149,7 +1149,7 @@ function setFilt(f,btn){
   document.querySelectorAll('.rp-fr .ft').forEach(b=>b.classList.remove('on'));
   btn.classList.add('on');renderNalozi();
 }
-function setNalogSort(v){nalogSort=v||'dt_asc';renderNalozi()}
+function setNalogSort(v){nalogSort=v||'created_desc';renderNalozi()}
 function planCreatedTs(p){
   const m=String(p?.id||'').match(/^(\d{13})/);
   return m?parseInt(m[1],10):0;
