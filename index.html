@@ -1528,6 +1528,8 @@ function printArchiveReport(){
   const rows=data.map(({nalog,obr,fotoIme},idx)=>{
     const mjesto=nalog.adr||'—';
     const brojJed=nalog.jed||'—';
+    const dtKontakt=nalog.dt_kontakt||obr.dtKontakt||'—';
+    const dtObrada=nalog.dt_obrada||obr.dtObrada||'—';
     const dtIsporuka=nalog.dt_isporuka||obr.dtIsporuka||'—';
     const pd=obr.pd!=null?`${obr.pd}%`:'—';
     const ver=obr.verificirano?'DA':'—';
@@ -1541,6 +1543,8 @@ function printArchiveReport(){
       <td>${esc(nalog.ime1||'')} ${esc(nalog.ime2||'')}</td>
       <td>${esc(nalog.tel||'—')}</td>
       <td class="c">${obr.otkaz?'—':esc(String(obr.kat||0))}</td>
+      <td>${dtKontakt!=='—'?fmtDS(dtKontakt):'—'}</td>
+      <td>${dtObrada!=='—'?fmtDS(dtObrada):'—'}</td>
       <td>${dtIsporuka!=='—'?fmtDS(dtIsporuka):'—'}</td>
       <td>${esc(obr.dogovoreno||'Adriatic.hr')}</td>
       <td class="num">${obr.km||0}</td>
@@ -1625,6 +1629,8 @@ function printArchiveReport(){
             <th>iznajmljivač</th>
             <th>kontakt</th>
             <th>broj kategorija</th>
+            <th>KONTAKT</th>
+            <th>FOTOGRAF.</th>
             <th>ISPORUČENO</th>
             <th>dogovoreno</th>
             <th>udaljenost (km)</th>
@@ -1719,6 +1725,8 @@ function exportExcel(){
     'Šifra':               nalog.sifra||'',
     'Ugovor':              nalog.ug||'',
     'Adresa':              nalog.adr||'',
+    'KONTAKT':             nalog.dt_kontakt||obr.dtKontakt||'',
+    'FOTOGRAF.':           nalog.dt_obrada||obr.dtObrada||'',
     'ISPORUČENO':         nalog.dt_isporuka||obr.dtIsporuka||'',
     'Dogovoreno':          obr.dogovoreno||'Adriatic.hr',
     'Kat. (kom)':          obr.otkaz?0:(obr.kat||0),
