@@ -571,7 +571,7 @@ textarea{resize:vertical;min-height:58px;font-size:.82rem;line-height:1.5}
         <input type="date" id="obr-dtObrada"></div>
     </div>
     <div class="fr c2">
-      <div><label>DOSTAVLJENO</label>
+      <div><label>ISPORUČENO</label>
         <input type="date" id="obr-dtIsporuka"></div>
       <div><label>Dogovoreno od strane</label>
         <select id="obr-dogovoreno">
@@ -1375,7 +1375,7 @@ function renderIzvjestaji(){
   const oibEl=g('phOib');if(oibEl)oibEl.textContent=fotoOib?'OIB: '+fotoOib:'';
   const pe=g('phPeriod');if(pe)pe.textContent='Razdoblje: '+period;
   const de=g('phDatum');if(de)de.textContent='Ispis: '+fmtDS(today());
-  const sube=g('phSub');if(sube)sube.textContent=izScope==='all'?'Svi fotografi — '+period:'Fotograf: '+fotoNm+' · '+period;
+  const sube=g('phSub');if(sube)sube.textContent=izScope==='all'?'Svi fotografi — '+period:fotoNm;
   const pfn=g('pfFotoIme');if(pfn)pfn.textContent=fotoNm;
   const pfo=g('pfOib');if(pfo)pfo.textContent=fotoOib;
   const pfd=g('pfDatum');if(pfd)pfd.textContent=fmtDS(today());
@@ -1407,7 +1407,7 @@ function renderIzvjestaji(){
         <th class="grp" colspan="2">Status</th>
       </tr>
       <tr>
-        <th>Ugovor</th><th>Kat.</th><th>Šifra</th><th>KONTAKT</th><th>FOTOGRAF.</th><th>DOSTAVLJENO</th>
+        <th>Ugovor</th><th>Kat.</th><th>Šifra</th><th>ISPORUČENO</th>
         <th>Dogovoreno</th>
         <th class="num">Km</th><th class="num">Ostalo</th>
         <th class="num">Foto.</th><th class="num">Dron</th><th class="num">Otkaz</th><th class="num">Put</th><th class="num">Ostalo</th><th class="num tot">Ukupno</th>
@@ -1426,8 +1426,6 @@ function renderIzvjestaji(){
         <td style="font-size:.72rem;color:var(--mut2)">${esc(nalog.ug||'—')}</td>
         <td>${obr.otkaz?'—':(obr.kat||0)}</td>
         <td><span style="font-family:var(--mono);font-size:.75rem;color:var(--acc)">${nalog.sifra?'#'+esc(nalog.sifra):'—'}</span></td>
-        <td>${(nalog.dt_kontakt||obr.dtKontakt)?fmtDS(nalog.dt_kontakt||obr.dtKontakt):'—'}</td>
-        <td>${(nalog.dt_obrada||obr.dtObrada)?fmtDS(nalog.dt_obrada||obr.dtObrada):'—'}</td>
         <td>${(nalog.dt_isporuka||obr.dtIsporuka)?fmtDS(nalog.dt_isporuka||obr.dtIsporuka):'—'}</td>
         <td>${esc(obr.dogovoreno||'Adriatic.hr')}</td>
         <td class="num">${obr.km||0}</td>
@@ -1530,8 +1528,6 @@ function printArchiveReport(){
   const rows=data.map(({nalog,obr,fotoIme},idx)=>{
     const mjesto=nalog.adr||'—';
     const brojJed=nalog.jed||'—';
-    const dtKontakt=nalog.dt_kontakt||obr.dtKontakt||'—';
-    const dtObrada=nalog.dt_obrada||obr.dtObrada||'—';
     const dtIsporuka=nalog.dt_isporuka||obr.dtIsporuka||'—';
     const pd=obr.pd!=null?`${obr.pd}%`:'—';
     const ver=obr.verificirano?'DA':'—';
@@ -1545,8 +1541,6 @@ function printArchiveReport(){
       <td>${esc(nalog.ime1||'')} ${esc(nalog.ime2||'')}</td>
       <td>${esc(nalog.tel||'—')}</td>
       <td class="c">${obr.otkaz?'—':esc(String(obr.kat||0))}</td>
-      <td>${dtKontakt!=='—'?fmtDS(dtKontakt):'—'}</td>
-      <td>${dtObrada!=='—'?fmtDS(dtObrada):'—'}</td>
       <td>${dtIsporuka!=='—'?fmtDS(dtIsporuka):'—'}</td>
       <td>${esc(obr.dogovoreno||'Adriatic.hr')}</td>
       <td class="num">${obr.km||0}</td>
@@ -1631,9 +1625,7 @@ function printArchiveReport(){
             <th>iznajmljivač</th>
             <th>kontakt</th>
             <th>broj kategorija</th>
-            <th>KONTAKT</th>
-            <th>FOTOGRAF.</th>
-            <th>DOSTAVLJENO</th>
+            <th>ISPORUČENO</th>
             <th>dogovoreno</th>
             <th>udaljenost (km)</th>
             <th>ostalo (eur)</th>
@@ -1727,9 +1719,7 @@ function exportExcel(){
     'Šifra':               nalog.sifra||'',
     'Ugovor':              nalog.ug||'',
     'Adresa':              nalog.adr||'',
-    'KONTAKT':             nalog.dt_kontakt||obr.dtKontakt||'',
-    'FOTOGRAF.':           nalog.dt_obrada||obr.dtObrada||'',
-    'DOSTAVLJENO':         nalog.dt_isporuka||obr.dtIsporuka||'',
+    'ISPORUČENO':         nalog.dt_isporuka||obr.dtIsporuka||'',
     'Dogovoreno':          obr.dogovoreno||'Adriatic.hr',
     'Kat. (kom)':          obr.otkaz?0:(obr.kat||0),
     'Km (1 relacija)':     obr.km||0,
