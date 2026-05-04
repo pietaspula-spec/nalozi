@@ -571,7 +571,7 @@ textarea{resize:vertical;min-height:58px;font-size:.82rem;line-height:1.5}
         <input type="date" id="obr-dtObrada"></div>
     </div>
     <div class="fr c2">
-      <div><label>DOSTAVLJENO</label>
+      <div><label>ISPORUČENO</label>
         <input type="date" id="obr-dtIsporuka"></div>
       <div><label>Dogovoreno od strane</label>
         <select id="obr-dogovoreno">
@@ -1407,7 +1407,7 @@ function renderIzvjestaji(){
         <th class="grp" colspan="2">Status</th>
       </tr>
       <tr>
-        <th>Ugovor</th><th>Kat.</th><th>Šifra</th><th>KONTAKT</th><th>FOTOGRAF.</th><th>DOSTAVLJENO</th>
+        <th>Ugovor</th><th>Kat.</th><th>Šifra</th><th>KONTAKT</th><th>FOTOGRAF.</th><th>ISPORUČENO</th>
         <th>Dogovoreno</th>
         <th class="num">Km</th><th class="num">Ostalo</th>
         <th class="num">Foto.</th><th class="num">Dron</th><th class="num">Otkaz</th><th class="num">Put</th><th class="num">Ostalo</th><th class="num tot">Ukupno</th>
@@ -1633,7 +1633,7 @@ function printArchiveReport(){
             <th>broj kategorija</th>
             <th>KONTAKT</th>
             <th>FOTOGRAF.</th>
-            <th>DOSTAVLJENO</th>
+            <th>ISPORUČENO</th>
             <th>dogovoreno</th>
             <th>udaljenost (km)</th>
             <th>ostalo (eur)</th>
@@ -1729,7 +1729,7 @@ function exportExcel(){
     'Adresa':              nalog.adr||'',
     'KONTAKT':             nalog.dt_kontakt||obr.dtKontakt||'',
     'FOTOGRAF.':           nalog.dt_obrada||obr.dtObrada||'',
-    'DOSTAVLJENO':         nalog.dt_isporuka||obr.dtIsporuka||'',
+    'ISPORUČENO':         nalog.dt_isporuka||obr.dtIsporuka||'',
     'Dogovoreno':          obr.dogovoreno||'Adriatic.hr',
     'Kat. (kom)':          obr.otkaz?0:(obr.kat||0),
     'Km (1 relacija)':     obr.km||0,
