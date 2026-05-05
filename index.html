@@ -1209,6 +1209,11 @@ function sortNaloziForView(plan,mode){
   return arr;
 }
 
+function markSeen(planId, fotoTs){
+  localStorage.setItem('nseen_'+planId, fotoTs||Date.now());
+  renderCurrentView();
+}
+
 // ── RENDER NALOZI ──
 function renderNalozi(){
   const list=g('nList');
@@ -1266,6 +1271,7 @@ function renderCard(p){
       ${fotoTs}
       <div style="margin-left:auto;display:flex;gap:6px">
         ${obrBtn}
+        ${hasNew?`<button class="btn bo bsm" style="color:var(--grn);border-color:var(--grn)" onclick="markSeen('${p.id}',${p._fotoTs})">✓ Viđeno</button>`:''}
         <button class="btn bo bsm" onclick="openNalog('${pid}')">✏️ Uredi</button>
       </div>
     </div>
