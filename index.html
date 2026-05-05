@@ -1240,7 +1240,7 @@ function renderCard(p){
   const pid=String(p.id).replace(/["'<>]/g,'');
   const hasObr=(stat==='obavljeno'||stat==='otkazano')&&!!getObracun(pid);
   const obrBtn=(stat==='obavljeno'||stat==='otkazano')?
-    `<button class="btn ${hasObr?'bgrn':'bo'} bsm" onclick="openObracun('${pid}','${selUid}')">${hasObr?'💰 ✓':'💰 Obračun'}</button>`:'';
+    `<button class="btn ${hasObr?'bgrn':'bo'} bsm" onclick="openObracun('${pid}','${selUid}')">${hasObr?'💰 Obračun ✓':'💰 Obračun'}</button>`:'';
   // Prikaz zadnjeg ažuriranja fotografa (_fotoTs) — pomaže adminu pratiti aktivnost
   // Zelena kuglica — fotograf promijenio nešto nakon što je admin zadnji puta vidio
   const seenTs = parseInt(localStorage.getItem('nseen_'+p.id)||'0');
