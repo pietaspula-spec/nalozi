@@ -665,6 +665,8 @@ textarea{resize:vertical;min-height:58px;font-size:.82rem;line-height:1.5}
     </div>
     <div class="fr"><div><label>📋 Napomena agencije</label>
       <textarea id="n-note-ag" placeholder="Posebne upute, pristup, ključevi, kontekst za fotografa…" rows="3"></textarea></div></div>
+    <div class="fr"><div><label>🏷️ Oznake jedinica</label>
+      <textarea id="n-oznake-jed" placeholder="Npr. apartman, studio, kuća, bazen, pogled na more…" rows="3"></textarea></div></div>
     <div class="fr" id="n-foto-info" style="display:none"><div>
       <label>💬 Komentar fotografa <span style="font-size:.68rem;color:var(--mut)">(samo za čitanje)</span></label>
       <textarea id="n-note-foto-ro" readonly rows="2" style="background:var(--bg2,#f4f4f4);color:var(--mut,#888);border-style:dashed"></textarea>
@@ -1069,7 +1071,7 @@ async function sbPatchPlan(uid,newPlan,opts={}){
     // Pobjeđuje novija izmjena: _adminTs vs _fotoTs.
     const SHARED_SYNC_FIELDS = ['sifra','ug','ime1','ime2','tel','adr','pbr','grad','lat','lng','dt_kontakt','dt_obrada','dt_isporuka'];
     // Admin-only polja ostaju u domeni agencije.
-    const ADMIN_ONLY_FIELDS_PATCH = ['jed','link','note_agencija','note','_adminTs'];
+    const ADMIN_ONLY_FIELDS_PATCH = ['jed','link','note_agencija','note','oznake_jedinica','_adminTs'];
     const existingMap = new Map(existingPlan.map(p=>[String(p.id),p]));
     const safePlan = newPlan.map(np => {
       const existing = existingMap.get(String(np.id));
@@ -1249,6 +1251,7 @@ function renderCard(p){
   const fotoTs = p._fotoTs ? `<span style="font-size:.62rem;color:var(--mut);font-family:var(--mono)" title="Zadnje ažuriranje fotografa">↺ ${fmtDS(new Date(p._fotoTs).toISOString().slice(0,10))}</span>` : '';
   // Napomena agencije (migracija: stariji zapisi imaju 'note')
   const noteAg = p.note_agencija || p.note || '';
+  const oznakeJed = p.oznake_jedinica || '';
   // Komentar fotografa + datumi
   const noteFoto = p.note_foto ? `<div class="pnote" style="background:var(--bg2,#f0f7f0);border-left:3px solid var(--grn,#22c55e)">💬 ${esc(p.note_foto)}</div>` : '';
   const dtKontakt = p.dt_kontakt ? `<span>📞 ${fmtDS(p.dt_kontakt)}</span>` : '';
@@ -1264,6 +1267,7 @@ function renderCard(p){
     ${p.tel?`<div class="pr">📞 <a href="tel:${esc(p.tel)}">${esc(p.tel)}</a></div>`:''}
     ${mjesto?`<div class="pr">📍 <a href="${maps}" target="_blank">${esc(mjesto)}</a></div>`:''}
     ${noteAg?`<div class="pnote">📋 ${esc(noteAg)}</div>`:''}
+    ${oznakeJed?`<div class="pnote" style="border-left:3px solid var(--pur,#a78bfa);padding-left:6px">🏷️ ${esc(oznakeJed)}</div>`:''}
     ${noteFoto}
     ${fotoDates}
     <div class="pac">
@@ -1814,6 +1818,7 @@ function openNalog(planId){
     g('n-link').value=item.link||'';
     g('n-lat').value=item.lat||'';g('n-lng').value=item.lng||'';
     g('n-note-ag').value=item.note_agencija||item.note||'';popFotoSel(selUid);
+    g('n-oznake-jed').value=item.oznake_jedinica||'';
     // Prikaz foto komentara u read-only dijelu
     const hasFoto=!!(item.note_foto||item.dt_kontakt||item.dt_obrada||item.dt_isporuka);
     g('n-foto-info').style.display=hasFoto?'':'none';
@@ -1826,7 +1831,7 @@ function openNalog(planId){
       g('n-foto-dates').textContent=dtParts.join('   ');
     }
   }else{
-    ['n-sifra','n-ug','n-ime1','n-ime2','n-tel','n-adr','n-pbr','n-grad','n-jed','n-link','n-lat','n-lng','n-note-ag'].forEach(id=>g(id).value='');
+    ['n-sifra','n-ug','n-ime1','n-ime2','n-tel','n-adr','n-pbr','n-grad','n-jed','n-link','n-lat','n-lng','n-note-ag','n-oznake-jed'].forEach(id=>g(id).value='');
     g('n-foto-info').style.display='none';
     popFotoSel(selUid);
   }
@@ -1856,6 +1861,7 @@ async function saveNalog(){
         jed:parseInt(v('n-jed'))||0, link:v('n-link').trim(),
         lat:v('n-lat').trim(),     lng:v('n-lng').trim(),
         note_agencija:v('n-note-ag').trim(),
+        oznake_jedinica:v('n-oznake-jed').trim(),
         _adminTs:Date.now()
       };
     }else{
@@ -1869,6 +1875,7 @@ async function saveNalog(){
         jed:parseInt(v('n-jed'))||0, link:v('n-link').trim(),
         lat:v('n-lat').trim(),     lng:v('n-lng').trim(),
         note_agencija:v('n-note-ag').trim(),
+        oznake_jedinica:v('n-oznake-jed').trim(),
         note_foto:'', dt_kontakt:'', dt_obrada:'', dt_isporuka:'',
         _adminTs:Date.now()
       });
